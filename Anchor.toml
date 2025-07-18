@@ -1,0 +1,42 @@
+[toolchain]
+anchor_version = "0.31.1"
+
+[features]
+resolution = true
+seeds = false
+skip-lint = false
+
+[programs.localnet]
+dex_solana = "6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "Localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/*.test.ts"
+
+[test]
+startup_wait = 10000
+shutdown_wait = 2000
+upgradeable = true
+
+[test.validator]
+bind_address = "0.0.0.0"
+url = "https://api.mainnet-beta.solana.com"
+ledger = ".anchor/test-ledger"
+rpc_port = 8899
+faucet_port = 9901
+
+# Token Mint
+[[test.validator.clone]]
+address = "So11111111111111111111111111111111111111112" # WSOL_MINT
+[[test.validator.clone]]
+address = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" # USDC_MINT
+[[test.validator.clone]]
+address = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB" # USDT_MINT
+[[test.validator.clone]]
+address = "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So" # mSOL_MINT
