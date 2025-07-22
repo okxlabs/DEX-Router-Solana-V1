@@ -3,7 +3,7 @@
 [![Anchor Version](https://img.shields.io/badge/Anchor-0.31.1-blue.svg)](https://www.anchor-lang.com/)
 [![Solana Version](https://img.shields.io/badge/Solana-2.2.12-purple.svg)](https://solana.com/)
 
-OKX DEX Router is a decentralized exchange (DEX) aggregator. We provide the best on-chain liquidity for trading any assets. Our X Routing algorithm finds the best price across every DEX. We compare prices from Liquidity Providers (LPs) with the best liquidity pools, split orders, and take into consideration prices, slippage, and network fees.
+This repository contains the core smart contracts for the Dex Router on Solana Blockchain. The router enables efficient token swaps across multiple liquidity sources and protocols through a unified interface.
 
 ## 🚀 Key Features
 
