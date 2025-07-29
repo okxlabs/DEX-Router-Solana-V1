@@ -4,18 +4,21 @@ use anchor_lang::prelude::*;
 pub const SEED_SA: &[u8] = b"okx_sa";
 pub const SEED_TEMP_WSOL: &[u8] = b"temp_wsol";
 pub const BUMP_SA: u8 = 251;
-pub const COMMISSION_RATE_LIMIT: u16 = 1000;
-pub const COMMISSION_DENOMINATOR: u64 = 10000;
 
-pub const COMMISSION_RATE_LIMIT_V2: u32 = 100000000;
-pub const TRIM_RATE_LIMIT_V2: u8 = 100;
-pub const PLATFORM_FEE_RATE_LIMIT_V2: u64 = 1000000000;
-pub const COMMISSION_DENOMINATOR_V2: u64 = 1000000000;
-pub const PLATFORM_FEE_DENOMINATOR_V2: u64 = 1000000000;
-pub const TRIM_DENOMINATOR_V2: u16 = 1000;
+pub const COMMISSION_RATE_LIMIT: u16 = 1_000; // 10%
+pub const COMMISSION_DENOMINATOR: u64 = 10_000;
 
-pub const PLATFORM_FEE_RATE_LIMIT_V3: u64 = 100000;
-pub const PLATFORM_FEE_DENOMINATOR_V3: u64 = 100000;
+pub const COMMISSION_RATE_LIMIT_V2: u32 = 100_000_000; // 10%
+pub const COMMISSION_DENOMINATOR_V2: u64 = 1_000_000_000;
+
+pub const PLATFORM_FEE_RATE_LIMIT_V2: u64 = 1_000_000_000; // 100%
+pub const PLATFORM_FEE_DENOMINATOR_V2: u64 = 1_000_000_000;
+
+pub const TRIM_RATE_LIMIT_V2: u8 = 100; // 10%
+pub const TRIM_DENOMINATOR_V2: u16 = 1_000;
+
+pub const PLATFORM_FEE_RATE_LIMIT_V3: u64 = 10_000; // 100%
+pub const PLATFORM_FEE_DENOMINATOR_V3: u64 = 10_000;
 
 pub const MAX_HOPS: usize = 3;
 pub const TOTAL_WEIGHT: u8 = 100;
@@ -58,6 +61,8 @@ pub const SABER_DECIMAL_WITHDRAW_SELECTOR: &[u8; 8] =
 pub const ONE_DEX_SWAP_SELECTOR: &[u8; 8] = &[8, 151, 245, 76, 172, 203, 144, 39];
 pub const MANIFEST_SWAP_SELECTOR: &[u8; 1] = &[4];
 pub const TESSERA_SWAP_SELECTOR: &[u8; 1] = &[16];
+pub const SOL_RFQ_FILL_ORDER_SELECTOR: &[u8; 8] = &[232, 122, 115, 25, 199, 143, 136, 162];
+pub const MIN_SOL_ACCOUNT_RENT: u64 = 890880;
 
 // ******************** Limit Order ******************** //
 pub const GLOBAL_CONFIG_SEED: &str = "global_config";
@@ -72,16 +77,19 @@ pub const FEE_MULTIPLIER_DENOMINATOR: u64 = 10;
 pub mod authority_pda {
     use anchor_lang::declare_id;
     declare_id!("HV1KXxWFaSeriyFvXyx48FqG9BoFbfinB8njCJonqP7K");
+    // declare_id!("4DwLmWvMyWPPKa8jhmW6AZKGctUMe7GxAWrb2Wcw8ZUa"); //pre_deploy
 }
 
 pub mod okx_bridge_program {
     use anchor_lang::declare_id;
     declare_id!("okxBd18urPbBi2vsExxUDArzQNcju2DugV9Mt46BxYE");
+    // declare_id!("preMfqJcNX4xdbGz7LGaNiUj9Ej5Qg2a4ymfbuG5R5k"); //pre_deploy
 }
 
 pub mod wsol_sa {
     use anchor_lang::declare_id;
     declare_id!("2rikd7tzPbmowhUJzPNVtX7fuUGcnBa8jqJnx6HbtHeE");
+    // declare_id!("5RWt14cufVyp4URS5hfoCczqSATxFH4AW6XAN8yyJtTg"); //pre_deploy
 }
 
 pub mod compute_budget_program {
@@ -209,17 +217,14 @@ pub mod saros_dlmm_program {
     use anchor_lang::declare_id;
     declare_id!("1qbkdrr3z4ryLA7pZykqxvxWPoeifcVKo6ZG9CfkvVE");
 }
-
 pub mod stabble_stable_program {
     use anchor_lang::declare_id;
     declare_id!("swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ");
 }
-
 pub mod stabble_weighted_program {
     use anchor_lang::declare_id;
     declare_id!("swapFpHZwjELNnjvThjajtiVmkz3yPQEHjLtka2fwHW");
 }
-
 pub mod sanctum_router_program {
     use anchor_lang::declare_id;
     declare_id!("stkitrT1Uoy18Dk1fTrgPw8W6MVzoCfYoAFT4MLsmhq");
@@ -365,4 +370,9 @@ pub mod pancake_swap_v3_program {
 pub mod tessera_program {
     use anchor_lang::declare_id;
     declare_id!("TessVdML9pBGgG9yGks7o4HewRaXVAMuoVj4x83GLQH");
+}
+
+pub mod sol_rfq_program {
+    use anchor_lang::declare_id;
+    declare_id!("preNqJotnzt2tUaeGX4FsQEU3dUsopsraZHVwNUwUAZ");
 }

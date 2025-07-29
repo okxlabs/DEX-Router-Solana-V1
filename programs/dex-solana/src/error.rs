@@ -134,6 +134,9 @@ pub enum ErrorCode {
     #[msg("Invalid fee account")]
     InvalidFeeAccount,
 
+    #[msg("Invalid source token sa")]
+    InvalidSourceTokenSa,
+
     #[msg("Sa authority is none")]
     SaAuthorityIsNone,
 
@@ -154,6 +157,9 @@ pub enum ErrorCode {
 
     #[msg("Invalid account data")]
     InvalidAccountData,
+
+    #[msg("Invalid RFQ parameters")]
+    InvalidRfqParameters,
 }
 
 #[error_code]

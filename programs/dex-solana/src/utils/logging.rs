@@ -87,13 +87,15 @@ pub fn log_rate_info_v3(
     commission_rate: u32,
     platform_fee_rate: Option<u16>,
     trim_rate: Option<u8>,
+    commission_direction: bool,
 ) {
     let platform_fee_rate_val = platform_fee_rate.unwrap_or(0);
     let trim_rate_val = trim_rate.unwrap_or(0);
     msg!(
-        "commission_rate: {:?}, platform_fee_rate: {:?}, trim_rate: {:?}",
+        "commission_rate: {:?}, platform_fee_rate: {:?}, trim_rate: {:?}, commission_direction: {:?}",
         commission_rate,
         platform_fee_rate_val,
-        trim_rate_val
+        trim_rate_val,
+        commission_direction
     );
 }

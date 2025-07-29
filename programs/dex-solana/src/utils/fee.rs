@@ -149,7 +149,10 @@ pub fn calculate_fee_amounts(
     );
 
     // commission_amount - platform_fee_amount
-    let commission_amount = commission_amount.checked_sub(platform_fee_amount).unwrap();
+    let commission_amount = commission_amount
+        .checked_sub(platform_fee_amount)
+        .ok_or(ErrorCode::CalculationError)?;
+
     Ok((commission_amount, platform_fee_amount))
 }
 
@@ -158,6 +161,7 @@ pub fn calculate_trim_amount(
     amount: u64,
     expected_amount_out: u64,
     commission_amount: u64,
+    platform_fee_amount: u64,
     commission_direction: bool,
     trim_rate: Option<u8>,
 ) -> Result<u64> {
@@ -179,6 +183,7 @@ pub fn calculate_trim_amount(
     } else {
         (amount
             .saturating_sub(commission_amount)
+            .saturating_sub(platform_fee_amount)
             .saturating_sub(expected_amount_out))
         .min(trim_limit)
     };
@@ -219,20 +224,38 @@ pub fn transfer_sol_fee<'a>(
     fee_account: &AccountInfo<'a>,
     fee_amount: u64,
     signer_seeds: Option<&[&[&[u8]]]>,
-) -> Result<()> {
+) -> Result<u64> {
     if fee_amount == 0 {
-        return Ok(());
+        return Ok(0);
     }
     require!(
         fee_account.owner == &anchor_lang::system_program::ID,
         ErrorCode::InvalidFeeAccount
     );
+
+    let actual_fee_amount = if authority.key() != authority_pda::id() {
+        let before_sol_balance = fee_account.lamports();
+        let after_sol_balance = before_sol_balance
+            .checked_add(fee_amount)
+            .ok_or(ErrorCode::CalculationError)?;
+        if after_sol_balance < MIN_SOL_ACCOUNT_RENT {
+            MIN_SOL_ACCOUNT_RENT
+                .checked_sub(before_sol_balance)
+                .ok_or(ErrorCode::CalculationError)?
+        } else {
+            fee_amount
+        }
+    } else {
+        fee_amount
+    };
+
     transfer_sol(
         authority.to_account_info(),
         fee_account.to_account_info(),
-        fee_amount,
+        actual_fee_amount,
         signer_seeds,
-    )
+    )?;
+    Ok(actual_fee_amount)
 }
 
 pub fn is_charge_sol(

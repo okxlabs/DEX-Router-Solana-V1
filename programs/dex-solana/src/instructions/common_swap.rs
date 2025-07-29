@@ -73,6 +73,7 @@ pub enum Dex {
     PancakeSwapV3Swap,
     PancakeSwapV3SwapV2,
     Tessera,
+    SolRfq,
 }
 
 #[derive(Debug)]
@@ -147,6 +148,14 @@ pub fn common_swap<'info, T: CommonSwapProcessor<'info>>(
         args.expect_amount_out,
         min_return,
     );
+
+    // Verify sa_authority is valid
+    if sa_authority.is_some() {
+        require!(
+            sa_authority.as_ref().unwrap().key() == authority_pda::ID,
+            ErrorCode::InvalidSaAuthority
+        );
+    }
 
     // get swap accounts
     let (mut source_account, mut destination_account) = swap_processor.get_swap_accounts(
@@ -281,6 +290,14 @@ pub fn common_swap_v3<'info, T: PlatformFeeV3Processor<'info>>(
         min_return,
     );
 
+    // Verify sa_authority is valid
+    if sa_authority.is_some() {
+        require!(
+            sa_authority.as_ref().unwrap().key() == authority_pda::ID,
+            ErrorCode::InvalidSaAuthority
+        );
+    }
+
     // get swap accounts
     let (mut source_account, mut destination_account) = swap_processor.get_swap_accounts(
         payer,
@@ -327,7 +344,7 @@ pub fn common_swap_v3<'info, T: PlatformFeeV3Processor<'info>>(
     )?;
 
     // after swap hook
-    swap_processor.after_swap(
+    let actual_amount_out = swap_processor.after_swap(
         payer,
         sa_authority,
         destination_token_account,
@@ -356,11 +373,20 @@ pub fn common_swap_v3<'info, T: PlatformFeeV3Processor<'info>>(
         .checked_sub(after_source_balance)
         .ok_or(ErrorCode::CalculationError)?;
 
-    destination_token_account.reload()?;
-    let after_destination_balance = destination_token_account.amount;
-    let destination_token_change = after_destination_balance
-        .checked_sub(before_destination_balance)
-        .ok_or(ErrorCode::CalculationError)?;
+    // destination token account has been closed in swap_tob_processor
+    let (after_destination_balance, destination_token_change) =
+        if destination_token_account.get_lamports() != 0 {
+            destination_token_account.reload()?;
+            let after_destination_balance = destination_token_account.amount;
+            (
+                after_destination_balance,
+                after_destination_balance
+                    .checked_sub(before_destination_balance)
+                    .ok_or(ErrorCode::CalculationError)?,
+            )
+        } else {
+            (actual_amount_out, actual_amount_out)
+        };
 
     log_swap_end(
         after_source_balance,
@@ -629,6 +655,7 @@ fn distribute_swap<'a>(
         Dex::PancakeSwapV3Swap => pancake_swap_v3::swap,
         Dex::PancakeSwapV3SwapV2 => pancake_swap_v3::swap_v2,
         Dex::Tessera => tessera::swap,
+        Dex::SolRfq => sol_rfq::fill_order,
     };
     swap_function(
         remaining_accounts,

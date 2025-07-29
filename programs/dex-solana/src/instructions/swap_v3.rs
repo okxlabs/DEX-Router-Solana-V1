@@ -63,7 +63,12 @@ pub fn swap_tob_handler<'a>(
 ) -> Result<()> {
     let commission_direction = commission_info >> 31 == 1;
     let commission_rate = commission_info & ((1 << 30) - 1);
-    log_rate_info_v3(commission_rate, platform_fee_rate, trim_rate);
+    log_rate_info_v3(
+        commission_rate,
+        platform_fee_rate,
+        trim_rate,
+        commission_direction,
+    );
 
     let trim_account = if trim_rate.is_some() && trim_rate.unwrap() > 0 {
         Some(&ctx.remaining_accounts[ctx.remaining_accounts.len() - 1])
@@ -107,7 +112,12 @@ pub fn swap_toc_handler<'a>(
 ) -> Result<()> {
     let commission_direction = commission_info >> 31 == 1;
     let commission_rate = commission_info & ((1 << 30) - 1);
-    log_rate_info_v3(commission_rate, platform_fee_rate, None);
+    log_rate_info_v3(
+        commission_rate,
+        platform_fee_rate,
+        None,
+        commission_direction,
+    );
 
     common_swap_v3(
         &SwapToCProcessor,

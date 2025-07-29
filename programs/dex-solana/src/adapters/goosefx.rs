@@ -2,8 +2,7 @@ use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
 use crate::{goosefx_gamma_program, HopAccounts, GAMMA_ORACLE_SWAP_SELECTOR};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
-use anchor_spl::token::Token;
-use anchor_spl::token_interface::{Mint, TokenAccount};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use arrayref::array_ref;
 
 use super::common::DexProcessor;
@@ -25,8 +24,8 @@ pub struct GooseFxAccount<'info> {
     pub pool_state: &'info AccountInfo<'info>,
     pub input_vault: InterfaceAccount<'info, TokenAccount>,
     pub output_vault: InterfaceAccount<'info, TokenAccount>,
-    pub input_token_program: Program<'info, Token>,
-    pub output_token_program: Program<'info, Token>,
+    pub input_token_program: Interface<'info, TokenInterface>,
+    pub output_token_program: Interface<'info, TokenInterface>,
     pub input_token_mint: InterfaceAccount<'info, Mint>,
     pub output_token_mint: InterfaceAccount<'info, Mint>,
     pub observation_state: &'info AccountInfo<'info>,
@@ -62,8 +61,8 @@ impl<'info> GooseFxAccount<'info> {
             pool_state,
             input_vault: InterfaceAccount::try_from(input_vault)?,
             output_vault: InterfaceAccount::try_from(output_vault)?,
-            input_token_program: Program::try_from(input_token_program)?,
-            output_token_program: Program::try_from(output_token_program)?,
+            input_token_program: Interface::try_from(input_token_program)?,
+            output_token_program: Interface::try_from(output_token_program)?,
             input_token_mint: InterfaceAccount::try_from(input_token_mint)?,
             output_token_mint: InterfaceAccount::try_from(output_token_mint)?,
             observation_state,

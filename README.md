@@ -1,7 +1,7 @@
 # DEX Router Solana V1
 
 [![Anchor Version](https://img.shields.io/badge/Anchor-0.31.1-blue.svg)](https://www.anchor-lang.com/)
-[![Solana Version](https://img.shields.io/badge/Solana-2.2.12-purple.svg)](https://solana.com/)
+[![Solana Version](https://img.shields.io/badge/Solana-2.1.21-purple.svg)](https://solana.com/)
 
 This repository contains the core smart contracts for the Dex Router on Solana Blockchain. The router enables efficient token swaps across multiple liquidity sources and protocols through a unified interface.
 

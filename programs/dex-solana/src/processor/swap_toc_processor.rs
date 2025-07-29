@@ -1,6 +1,7 @@
 use crate::constants::*;
 use crate::error::ErrorCode;
 use crate::processor::platform_fee_processor::PlatformFeeV3Processor;
+use crate::processor::proxy_swap_processor::ProxySwapProcessor;
 use crate::utils::*;
 use anchor_lang::prelude::*;
 use anchor_spl::{
@@ -18,10 +19,9 @@ impl SwapToCProcessor {
         commission_rate: u32,
         commission_direction: bool,
         platform_fee_rate: Option<u16>,
-    ) -> Result<(u64, u64, u64, bool)> {
+    ) -> Result<(u64, u64, bool)> {
         let mut commission_amount = 0;
         let mut platform_fee_amount = 0;
-        let mut actual_amount_in = amount_in;
 
         if commission_direction && commission_rate > 0 {
             // Calculate commission and platform fee amounts
@@ -31,18 +31,11 @@ impl SwapToCProcessor {
                 commission_direction,
                 platform_fee_rate,
             )?;
-
-            actual_amount_in = actual_amount_in
-                .checked_add(commission_amount)
-                .ok_or(ErrorCode::CalculationError)?
-                .checked_add(platform_fee_amount)
-                .ok_or(ErrorCode::CalculationError)?;
         }
 
         Ok((
             commission_amount,
             platform_fee_amount,
-            actual_amount_in,
             commission_amount > 0 || platform_fee_amount > 0,
         ))
     }
@@ -84,72 +77,6 @@ impl SwapToCProcessor {
         ))
     }
 
-    /// Proxy handle before swap
-    fn proxy_handle_before<'info>(
-        &self,
-        payer: &AccountInfo<'info>,
-        source_token_account: &InterfaceAccount<'info, TokenAccount>,
-        source_token_sa: &Option<UncheckedAccount<'info>>,
-        source_mint: &InterfaceAccount<'info, Mint>,
-        source_token_program: &Option<Interface<'info, TokenInterface>>,
-        amount: u64,
-    ) -> Result<()> {
-        if source_token_sa.is_none() || source_token_program.is_none() {
-            return Ok(());
-        }
-        let source_token_program = source_token_program.as_ref().unwrap();
-        let source_token_sa =
-            associate_convert_token_account(&source_token_sa.as_ref().unwrap().to_account_info())?;
-
-        require!(
-            source_token_sa.owner == authority_pda::ID,
-            ErrorCode::InvalidSaAuthority
-        );
-        transfer_token(
-            payer.to_account_info(),
-            source_token_account.to_account_info(),
-            source_token_sa.to_account_info(),
-            source_mint.to_account_info(),
-            source_token_program.to_account_info(),
-            amount,
-            source_mint.decimals,
-            None,
-        )?;
-        Ok(())
-    }
-
-    /// Proxy handle after swap
-    fn proxy_handle_after<'info>(
-        &self,
-        sa_authority: &Option<UncheckedAccount<'info>>,
-        destination_token_account: &InterfaceAccount<'info, TokenAccount>,
-        destination_mint: &InterfaceAccount<'info, Mint>,
-        destination_token_sa: &Option<UncheckedAccount<'info>>,
-        destination_token_program: &Option<Interface<'info, TokenInterface>>,
-        amount_out: u64,
-    ) -> Result<()> {
-        // Transfer tokens to destination token account
-        if sa_authority.is_some()
-            && destination_token_sa.is_some()
-            && destination_token_program.is_some()
-        {
-            let sa_authority = sa_authority.as_ref().unwrap();
-            let destination_token_sa = destination_token_sa.as_ref().unwrap();
-            let destination_token_program = destination_token_program.as_ref().unwrap();
-            transfer_token(
-                sa_authority.to_account_info(),
-                destination_token_sa.to_account_info(),
-                destination_token_account.to_account_info(),
-                destination_mint.to_account_info(),
-                destination_token_program.to_account_info(),
-                amount_out,
-                destination_mint.decimals,
-                Some(SA_AUTHORITY_SEED),
-            )?;
-        }
-        Ok(())
-    }
-
     /// Transfer from fees and log results
     fn transfer_from_fees_and_log<'info>(
         &self,
@@ -183,16 +110,18 @@ impl SwapToCProcessor {
             // Transfer SOL commission
             if commission_amount > 0 {
                 let commission_account = commission_account.as_ref().unwrap();
-                transfer_sol_fee(payer, commission_account, commission_amount, None)?;
-                log_commission_info(true, commission_amount);
+                let actual_fee_amount =
+                    transfer_sol_fee(payer, commission_account, commission_amount, None)?;
+                log_commission_info(true, actual_fee_amount);
                 commission_account.key().log();
             }
 
             // Transfer SOL platform fee
             if platform_fee_amount > 0 {
                 let platform_fee_account = platform_fee_account.as_ref().unwrap();
-                transfer_sol_fee(payer, platform_fee_account, platform_fee_amount, None)?;
-                log_platform_fee_info(platform_fee_amount, &platform_fee_account.key());
+                let actual_fee_amount =
+                    transfer_sol_fee(payer, platform_fee_account, platform_fee_amount, None)?;
+                log_platform_fee_info(actual_fee_amount, &platform_fee_account.key());
             }
         } else {
             require!(
@@ -264,6 +193,11 @@ impl SwapToCProcessor {
                 ErrorCode::PlatformFeeAccountIsNone
             );
         }
+        require!(
+            destination_token_program.is_some(),
+            ErrorCode::DestinationTokenProgramIsNone
+        );
+        let destination_token_program = destination_token_program.as_ref().unwrap();
 
         if is_charge_sol(commission_account, platform_fee_account, destination_mint) {
             // Close temp wsol token account
@@ -271,11 +205,6 @@ impl SwapToCProcessor {
                 destination_token_account.owner == payer.key(),
                 ErrorCode::InvalidDestinationTokenAccount
             );
-            require!(
-                destination_token_program.is_some(),
-                ErrorCode::DestinationTokenProgramIsNone
-            );
-            let destination_token_program = destination_token_program.as_ref().unwrap();
             close_token_account(
                 destination_token_account.to_account_info(),
                 payer.to_account_info(),
@@ -284,27 +213,23 @@ impl SwapToCProcessor {
                 None,
             )?;
 
-            // Transfer fees
+            // Transfer sol fees
             if commission_amount > 0 {
                 let commission_account = commission_account.as_ref().unwrap();
-                transfer_sol_fee(payer, commission_account, commission_amount, None)?;
-                log_commission_info(false, commission_amount);
+                let actual_fee_amount =
+                    transfer_sol_fee(payer, commission_account, commission_amount, None)?;
+                log_commission_info(false, actual_fee_amount);
                 commission_account.key().log();
             }
 
             if platform_fee_amount > 0 {
                 let platform_fee_account = platform_fee_account.as_ref().unwrap();
-                transfer_sol_fee(payer, platform_fee_account, platform_fee_amount, None)?;
-                log_platform_fee_info(platform_fee_amount, &platform_fee_account.key());
+                let actual_fee_amount =
+                    transfer_sol_fee(payer, platform_fee_account, platform_fee_amount, None)?;
+                log_platform_fee_info(actual_fee_amount, &platform_fee_account.key());
             }
         } else {
-            require!(
-                destination_token_program.is_some(),
-                ErrorCode::DestinationTokenProgramIsNone
-            );
-            let destination_token_program = destination_token_program.as_ref().unwrap();
-
-            // Regular tokens case - transfer fees first
+            // Transfer token fees
             if commission_amount > 0 {
                 let commission_account = commission_account.as_ref().unwrap();
                 transfer_token_fee(
@@ -357,29 +282,20 @@ impl<'info> PlatformFeeV3Processor<'info> for SwapToCProcessor {
         InterfaceAccount<'info, TokenAccount>,
         InterfaceAccount<'info, TokenAccount>,
     )> {
-        let source_account = create_sa_if_needed(
+        ProxySwapProcessor.get_swap_accounts(
             payer,
+            source_token_account,
+            destination_token_account,
             source_mint,
-            sa_authority,
-            source_token_sa,
-            source_token_program,
-            associated_token_program,
-            system_program,
-        )?
-        .unwrap_or_else(|| source_token_account.clone());
-
-        let destination_account = create_sa_if_needed(
-            payer,
             destination_mint,
             sa_authority,
+            source_token_sa,
             destination_token_sa,
+            source_token_program,
             destination_token_program,
             associated_token_program,
             system_program,
-        )?
-        .unwrap_or_else(|| destination_token_account.clone());
-
-        Ok((source_account, destination_account))
+        )
     }
 
     fn before_swap(
@@ -398,23 +314,23 @@ impl<'info> PlatformFeeV3Processor<'info> for SwapToCProcessor {
         platform_fee_account: &Option<AccountInfo<'info>>,
     ) -> Result<u64> {
         // Proxy handle before swap
-        self.proxy_handle_before(
+        ProxySwapProcessor.proxy_handle_before(
             payer,
             source_token_account,
             source_token_sa,
             source_mint,
             source_token_program,
             amount_in,
+            None,
         )?;
 
         // Calculate fees if commission is applied to from
-        let (commission_amount, platform_fee_amount, _actual_amount_in, is_charge_fee) = self
-            .calculate_from_fees(
-                amount_in,
-                commission_rate,
-                commission_direction,
-                platform_fee_rate,
-            )?;
+        let (commission_amount, platform_fee_amount, is_charge_fee) = self.calculate_from_fees(
+            amount_in,
+            commission_rate,
+            commission_direction,
+            platform_fee_rate,
+        )?;
 
         // Transfer from fees and log results
         self.transfer_from_fees_and_log(
@@ -448,19 +364,20 @@ impl<'info> PlatformFeeV3Processor<'info> for SwapToCProcessor {
         platform_fee_account: &Option<AccountInfo<'info>>,
         _trim_rate: Option<u8>,
         _trim_account: Option<&AccountInfo<'info>>,
-    ) -> Result<()> {
+    ) -> Result<u64> {
         // Proxy handle after swap
-        self.proxy_handle_after(
+        ProxySwapProcessor.proxy_handle_after(
             sa_authority,
             destination_token_account,
             destination_mint,
             destination_token_sa,
             destination_token_program,
             amount_out,
+            Some(SA_AUTHORITY_SEED),
         )?;
 
         // Calculate fees and actual amount out if commission is applied to to
-        let (commission_amount, platform_fee_amount, _actual_amount_out, is_charge_fee) = self
+        let (commission_amount, platform_fee_amount, actual_amount_out, is_charge_fee) = self
             .calculate_to_fees(
                 amount_out,
                 commission_rate,
@@ -481,6 +398,6 @@ impl<'info> PlatformFeeV3Processor<'info> for SwapToCProcessor {
             is_charge_fee,
         )?;
 
-        Ok(())
+        Ok(actual_amount_out)
     }
 }
