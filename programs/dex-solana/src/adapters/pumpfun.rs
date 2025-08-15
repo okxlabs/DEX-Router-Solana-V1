@@ -74,13 +74,15 @@ pub struct PumpfunBuyAccounts<'info> {
     pub token_program: Program<'info, Token>,
     pub creator_vault: &'info AccountInfo<'info>,
     pub event_authority: &'info AccountInfo<'info>,
+    pub global_volume_accumulator: &'info AccountInfo<'info>,
+    pub user_volume_accumulator: &'info AccountInfo<'info>,
 }
-const BUY_ACCOUNTS_LEN: usize = 13;
+const BUY_ACCOUNTS_LEN: usize = 15;
 
 pub struct PumpfunBuyProcessor;
 impl DexProcessor for PumpfunBuyProcessor { 
     fn before_invoke(&self, account_infos: &[AccountInfo]) -> Result<u64> {
-        let source_token_account = account_infos.get(12).unwrap();
+        let source_token_account = account_infos.last().unwrap();
         let token_program = account_infos.get(8).unwrap();
         let authority = account_infos.get(6).unwrap();
 
@@ -123,6 +125,8 @@ impl<'info> PumpfunBuyAccounts<'info> {
             token_program,
             creator_vault,
             event_authority,
+            global_volume_accumulator,
+            user_volume_accumulator,
             
         ]: &[AccountInfo<'info>; BUY_ACCOUNTS_LEN] = array_ref![accounts, offset, BUY_ACCOUNTS_LEN];
 
@@ -140,6 +144,8 @@ impl<'info> PumpfunBuyAccounts<'info> {
             token_program: Program::try_from(token_program)?,
             creator_vault,
             event_authority,
+            global_volume_accumulator,
+            user_volume_accumulator,
         })
     }
 
@@ -210,7 +216,9 @@ pub fn buy<'a>(
         AccountMeta::new_readonly(swap_accounts.token_program.key(), false),
         AccountMeta::new(swap_accounts.creator_vault.key(), false),
         AccountMeta::new_readonly(swap_accounts.event_authority.key(), false),
-        AccountMeta::new_readonly(swap_accounts.dex_program_id.key(), false)
+        AccountMeta::new_readonly(swap_accounts.dex_program_id.key(), false),
+        AccountMeta::new(swap_accounts.global_volume_accumulator.key(), false),
+        AccountMeta::new(swap_accounts.user_volume_accumulator.key(), false),
     ];
 
     let account_infos = vec![
@@ -226,6 +234,8 @@ pub fn buy<'a>(
         swap_accounts.creator_vault.to_account_info(),
         swap_accounts.event_authority.to_account_info(),
         swap_accounts.dex_program_id.to_account_info(),
+        swap_accounts.global_volume_accumulator.to_account_info(),
+        swap_accounts.user_volume_accumulator.to_account_info(),
         swap_accounts.swap_source_token.to_account_info(),
     ];
 
