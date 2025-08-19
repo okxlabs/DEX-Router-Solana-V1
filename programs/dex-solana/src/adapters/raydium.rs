@@ -442,9 +442,10 @@ pub fn swap<'a>(
 
     let dex_processor = &RaydiumSwapProcessor;  
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,
@@ -555,9 +556,10 @@ pub fn swap_stable<'a>(
 
     let dex_processor = &RaydiumSwapProcessor;
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,
@@ -668,9 +670,10 @@ pub fn swap_clmm<'a>(
 
     let dex_processor = &RaydiumSwapProcessor;  
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,
@@ -788,9 +791,10 @@ pub fn swap_clmm_v2<'a>(
 
     let dex_processor = &RaydiumSwapProcessor;  
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,
@@ -889,9 +893,10 @@ pub fn swap_cpmm<'a>(
 
     let dex_processor = &RaydiumSwapProcessor;  
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,

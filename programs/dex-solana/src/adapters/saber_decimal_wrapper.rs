@@ -1,6 +1,9 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{saber_decimal_wrapper_program, HopAccounts, SABER_DECIMAL_DEPOSIT_SELECTOR, SABER_DECIMAL_WITHDRAW_SELECTOR};
+use crate::{
+    saber_decimal_wrapper_program, HopAccounts, SABER_DECIMAL_DEPOSIT_SELECTOR,
+    SABER_DECIMAL_WITHDRAW_SELECTOR,
+};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token_interface::TokenAccount;
 use arrayref::array_ref;
@@ -68,12 +71,17 @@ pub fn deposit<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!("Dex::SaberDecimalWrapperDeposit amount_in: {}, offset: {}", amount_in, offset);
+    msg!(
+        "Dex::SaberDecimalWrapperDeposit amount_in: {}, offset: {}",
+        amount_in,
+        offset
+    );
     require!(
         remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
     );
-    let mut swap_accounts = SaberDecimalWrapperAccounts::parse_accounts(remaining_accounts, *offset)?;
+    let mut swap_accounts =
+        SaberDecimalWrapperAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &saber_decimal_wrapper_program::id() {
         return Err(ErrorCode::InvalidProgramId.into());
     }
@@ -81,7 +89,6 @@ pub fn deposit<'a>(
     swap_accounts.wrapper.key().log();
 
     // check hop accounts & swap authority
-    let swap_source_token = swap_accounts.swap_source_token.key();
     let swap_destination_token = swap_accounts.swap_destination_token.key();
 
     before_check(
@@ -121,14 +128,15 @@ pub fn deposit<'a>(
     let instruction = Instruction {
         program_id: *swap_accounts.dex_program_id.key,
         accounts: account_meta,
-        data
+        data,
     };
 
     let dex_processor = SaberDecimalProcessor {};
     let amount_out = invoke_process(
+        amount_in,
         &dex_processor,
         &account_info,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,
@@ -151,12 +159,17 @@ pub fn withdraw<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!("Dex::SaberDecimalWrapperWithdraw amount_in: {}, offset: {}", amount_in, offset);
+    msg!(
+        "Dex::SaberDecimalWrapperWithdraw amount_in: {}, offset: {}",
+        amount_in,
+        offset
+    );
     require!(
         remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
     );
-    let mut swap_accounts = SaberDecimalWrapperAccounts::parse_accounts(remaining_accounts, *offset)?;
+    let mut swap_accounts =
+        SaberDecimalWrapperAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &saber_decimal_wrapper_program::id() {
         return Err(ErrorCode::InvalidProgramId.into());
     }
@@ -164,7 +177,6 @@ pub fn withdraw<'a>(
     swap_accounts.wrapper.key().log();
 
     // check hop accounts & swap authority
-    let swap_source_token = swap_accounts.swap_source_token.key();
     let swap_destination_token = swap_accounts.swap_destination_token.key();
 
     before_check(
@@ -204,14 +216,15 @@ pub fn withdraw<'a>(
     let instruction = Instruction {
         program_id: *swap_accounts.dex_program_id.key,
         accounts: account_meta,
-        data
+        data,
     };
 
     let dex_processor = SaberDecimalProcessor {};
     invoke_process(
+        amount_in,
         &dex_processor,
         &account_info,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,

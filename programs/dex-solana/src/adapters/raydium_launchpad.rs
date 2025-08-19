@@ -2,8 +2,8 @@ use super::common::DexProcessor;
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
 use crate::{
-    raydium_launchpad_program, HopAccounts, RAYDIUM_LAUNCHPAD_BUY_SELECTOR,
-    RAYDIUM_LAUNCHPAD_SELL_SELECTOR, letsbonk_platform_config,
+    letsbonk_platform_config, raydium_launchpad_program, HopAccounts,
+    RAYDIUM_LAUNCHPAD_BUY_SELECTOR, RAYDIUM_LAUNCHPAD_SELL_SELECTOR,
 };
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::Instruction;
@@ -95,14 +95,23 @@ pub fn launchpad_handler<'a>(
     } else {
         "LetsBonkFun"
     };
-    msg!("Dex::{} amount_in: {}, offset: {}", platform_name, amount_in, offset);
+    msg!(
+        "Dex::{} amount_in: {}, offset: {}",
+        platform_name,
+        amount_in,
+        offset
+    );
 
     swap_accounts.pool_state.key().log();
 
     let swap_base_token;
     let swap_quote_token;
     let mut data = Vec::with_capacity(32);
-    if swap_accounts.swap_source_token.mint.eq(&swap_accounts.quote_mint.key()) {
+    if swap_accounts
+        .swap_source_token
+        .mint
+        .eq(&swap_accounts.quote_mint.key())
+    {
         swap_base_token = &swap_accounts.swap_destination_token;
         swap_quote_token = &swap_accounts.swap_source_token;
         data.extend_from_slice(RAYDIUM_LAUNCHPAD_BUY_SELECTOR);
@@ -171,9 +180,10 @@ pub fn launchpad_handler<'a>(
     };
     let dex_processor = &LaunchpadProcessor;
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_accounts.swap_source_token.key(),
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,

@@ -170,9 +170,10 @@ pub fn swap<'a>(
 
     let dex_processor = &StabbleSwapProcessor;
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_info,
-        swap_accounts.swap_source_token.key(),
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,

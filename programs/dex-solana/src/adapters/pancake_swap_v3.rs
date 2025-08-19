@@ -149,7 +149,11 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!("Dex::PancakeSwapV3Swap amount_in: {}, offset: {}", amount_in, offset);
+    msg!(
+        "Dex::PancakeSwapV3Swap amount_in: {}, offset: {}",
+        amount_in,
+        offset
+    );
     require!(
         remaining_accounts.len() >= *offset + SWAP_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -217,11 +221,11 @@ pub fn swap<'a>(
 
     let tick_array1 = swap_accounts.tick_array1.key();
     let tick_array2 = swap_accounts.tick_array2.key();
-    if tick_array1 != ZERO_ADDRESS || tick_array1 != pancake_swap_v3_program::id() {
+    if tick_array1 != ZERO_ADDRESS && tick_array1 != pancake_swap_v3_program::id() {
         accounts.push(AccountMeta::new(tick_array1, false));
         account_infos.push(swap_accounts.tick_array1.to_account_info());
     }
-    if tick_array2 != ZERO_ADDRESS || tick_array2 != pancake_swap_v3_program::id() {
+    if tick_array2 != ZERO_ADDRESS && tick_array2 != pancake_swap_v3_program::id() {
         accounts.push(AccountMeta::new(tick_array2, false));
         account_infos.push(swap_accounts.tick_array2.to_account_info());
     }
@@ -234,9 +238,10 @@ pub fn swap<'a>(
 
     let dex_processor = &PancakeSwapV3Processor;
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,
@@ -259,13 +264,18 @@ pub fn swap_v2<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!("Dex::PancakeSwapV3SwapV2 amount_in: {}, offset: {}", amount_in, offset);
+    msg!(
+        "Dex::PancakeSwapV3SwapV2 amount_in: {}, offset: {}",
+        amount_in,
+        offset
+    );
     require!(
         remaining_accounts.len() >= *offset + SWAP_V2_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
     );
 
-    let mut swap_accounts = PancakeSwapV3SwapV2Accounts::parse_accounts(remaining_accounts, *offset)?;
+    let mut swap_accounts =
+        PancakeSwapV3SwapV2Accounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &pancake_swap_v3_program::id() {
         return Err(ErrorCode::InvalidProgramId.into());
     }
@@ -308,8 +318,8 @@ pub fn swap_v2<'a>(
         AccountMeta::new(swap_accounts.observation_state.key(), false),
         AccountMeta::new_readonly(swap_accounts.token_program.key(), false), // spl token
         AccountMeta::new_readonly(swap_accounts.token_program_2022.key(), false), // token 2022
-        AccountMeta::new_readonly(swap_accounts.memo_program.key(), false), 
-        AccountMeta::new_readonly(swap_accounts.input_vault_mint.key(), false), 
+        AccountMeta::new_readonly(swap_accounts.memo_program.key(), false),
+        AccountMeta::new_readonly(swap_accounts.input_vault_mint.key(), false),
         AccountMeta::new_readonly(swap_accounts.output_vault_mint.key(), false),
         AccountMeta::new(swap_accounts.ex_bitmap.key(), false),
         AccountMeta::new(swap_accounts.tick_array0.key(), false),
@@ -335,11 +345,11 @@ pub fn swap_v2<'a>(
 
     let tick_array1 = swap_accounts.tick_array1.key();
     let tick_array2 = swap_accounts.tick_array2.key();
-    if tick_array1 != ZERO_ADDRESS || tick_array1 != pancake_swap_v3_program::id() {
+    if tick_array1 != ZERO_ADDRESS && tick_array1 != pancake_swap_v3_program::id() {
         accounts.push(AccountMeta::new(tick_array1, false));
         account_infos.push(swap_accounts.tick_array1.to_account_info());
     }
-    if tick_array2 != ZERO_ADDRESS || tick_array2 != pancake_swap_v3_program::id() {
+    if tick_array2 != ZERO_ADDRESS && tick_array2 != pancake_swap_v3_program::id() {
         accounts.push(AccountMeta::new(tick_array2, false));
         account_infos.push(swap_accounts.tick_array2.to_account_info());
     }
@@ -352,9 +362,10 @@ pub fn swap_v2<'a>(
 
     let dex_processor = &PancakeSwapV3Processor;
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,

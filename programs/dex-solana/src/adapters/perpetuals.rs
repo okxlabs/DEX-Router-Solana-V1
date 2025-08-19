@@ -303,9 +303,10 @@ pub fn perpetuals_swap_handler<'a>(
     };
 
     let amount_out = invoke_process(
+        amount_in,
         &PerpetualsProcessor,
         &swap_accounts.get_accountinfos(),
-        swap_accounts.funding_account.key(),
+        &mut swap_accounts.funding_account,
         &mut swap_accounts.receiving_account,
         hop_accounts,
         instruction,
@@ -369,9 +370,10 @@ pub fn liquidity_handler<'a>(
         };
 
         invoke_process(
+            amount_in,
             &PerpetualsProcessor,
             &handle_liquidity_accounts.get_accountinfos(),
-            handle_liquidity_accounts.funding_or_receiving_account.key(),
+            &mut handle_liquidity_accounts.funding_or_receiving_account,
             &mut handle_liquidity_accounts.jlp_token_account,
             hop_accounts,
             instruction,
@@ -394,9 +396,10 @@ pub fn liquidity_handler<'a>(
         };
 
         invoke_process(
+            amount_in,
             &PerpetualsProcessor,
             &handle_liquidity_accounts.get_accountinfos(),
-            handle_liquidity_accounts.jlp_token_account.key(),
+            &mut handle_liquidity_accounts.jlp_token_account,
             &mut handle_liquidity_accounts.funding_or_receiving_account,
             hop_accounts,
             instruction,

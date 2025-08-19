@@ -92,7 +92,6 @@ pub fn swap<'a>(
     swap_accounts.token_swap.key().log();
 
     // check hop accounts & swap authority
-    let swap_source_token = swap_accounts.swap_source_token.key();
     let swap_destination_token = swap_accounts.swap_destination_token.key();
 
     before_check(
@@ -105,7 +104,7 @@ pub fn swap<'a>(
         owner_seeds,
     )?;
 
-    let accounts = vec! [
+    let accounts = vec![
         AccountMeta::new_readonly(swap_accounts.token_swap.key(), false),
         AccountMeta::new_readonly(swap_accounts.authority.key(), false),
         AccountMeta::new_readonly(swap_accounts.user_transfer_authority.key(), true),
@@ -143,9 +142,10 @@ pub fn swap<'a>(
 
     let dex_processor = DooarProcessor {};
     let amount_out = invoke_process(
+        amount_in,
         &dex_processor,
         &account_infos,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,

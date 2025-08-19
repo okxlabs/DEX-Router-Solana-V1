@@ -98,8 +98,13 @@ impl<'info> SanctumStakeWsol<'info> {
         &self.dest_token_to
     }
 
-    fn dst_token_account_mut(&mut self) -> &mut Box<InterfaceAccount<'info, TokenAccount>> {
-        &mut self.dest_token_to
+    fn get_token_accounts_mut(
+        &mut self,
+    ) -> (
+        &mut InterfaceAccount<'info, TokenAccount>,
+        &mut InterfaceAccount<'info, TokenAccount>,
+    ) {
+        (&mut self.wsol_from, &mut self.dest_token_to)
     }
 
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
@@ -409,8 +414,8 @@ impl<'info> SanctumPrefundWithdrawStake<'info> {
         self.dex_program_id
     }
 
-    fn src_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
-        &self.src_token_from
+    fn src_token_account_mut(&mut self) -> &mut Box<InterfaceAccount<'info, TokenAccount>> {
+        &mut self.src_token_from
     }
 
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
@@ -1237,14 +1242,18 @@ impl<'info> SanctumWithdrawWsol<'info> {
     fn dex_program_id(&self) -> &AccountInfo<'info> {
         self.dex_program_id
     }
-    fn src_token_account(&self) -> &InterfaceAccount<'info, TokenAccount> {
-        &self.src_token_from
-    }
+    
     fn dst_token_account(&self) -> &InterfaceAccount<'info, TokenAccount> {
         &self.wsol_to
     }
-    fn dst_token_account_mut(&mut self) -> &mut InterfaceAccount<'info, TokenAccount> {
-        &mut self.wsol_to
+    
+    fn get_token_accounts_mut(
+        &mut self,
+    ) -> (
+        &mut InterfaceAccount<'info, TokenAccount>,
+        &mut InterfaceAccount<'info, TokenAccount>,
+    ) {
+        (&mut self.src_token_from, &mut self.wsol_to)
     }
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
         vec![
@@ -1386,13 +1395,11 @@ pub fn stake_wsol_handler<'a>(
         ErrorCode::InvalidProgramId
     );
 
-    let src_token_account = stake_wsol_accounts.src_token_account().key();
-    let dst_token_account = stake_wsol_accounts.dst_token_account().key();
-
+   
     before_check(
         &stake_wsol_accounts.swap_authority_pubkey,
         &stake_wsol_accounts.src_token_account(),
-        dst_token_account,
+        stake_wsol_accounts.dst_token_account().key(),
         hop_accounts,
         hop,
         proxy_swap,
@@ -1402,25 +1409,24 @@ pub fn stake_wsol_handler<'a>(
     let mut deposit_stake_ix_data = Vec::<u8>::from(&0u8.to_le_bytes()); //stake wsol discriminator
     deposit_stake_ix_data.extend_from_slice(&amount_in.to_le_bytes());
 
-    let deposit_accountmetas: Vec<AccountMeta> = stake_wsol_accounts
-        .get_accountmetas()
+    let deposit_accountmetas: Vec<AccountMeta> = stake_wsol_accounts.get_accountmetas()
         .into_iter()
         .chain(deposit_accounts.get_accountmetas())
         .collect();
 
-    let swap_accounts: Vec<AccountInfo<'a>> = stake_wsol_accounts
-        .get_accountinfos()
+    let swap_accounts: Vec<AccountInfo<'a>> = stake_wsol_accounts.get_accountinfos()
         .into_iter()
         .chain(deposit_accounts.get_accountinfos())
         .collect();
 
+    let (src_token_account_mut, dst_token_account_mut) = stake_wsol_accounts.get_token_accounts_mut();
     let dex_processor = &SanctumRouterProcessor;
-
     invoke_process(
+        amount_in,
         dex_processor,
         &swap_accounts,
-        src_token_account,
-        stake_wsol_accounts.dst_token_account_mut(),
+        src_token_account_mut,
+        dst_token_account_mut,
         hop_accounts,
         Instruction {
             program_id: sanctum_router_program::id(),
@@ -1454,7 +1460,7 @@ pub fn prefund_swap_via_stake_handler<'a>(
 
     let mut accounts_len: usize = 0;
 
-    let prefund_withdraw_accounts =
+    let mut prefund_withdraw_accounts =
         SanctumPrefundWithdrawStake::parse_accounts(remaining_accounts, *offset)?;
     accounts_len += PREFUND_WITHDRAW_STAKE_IX_ACCOUNTS_LEN;
 
@@ -1498,13 +1504,11 @@ pub fn prefund_swap_via_stake_handler<'a>(
         ErrorCode::InvalidSwapAuthorityAccounts
     );
 
-    let src_token_account = prefund_withdraw_accounts.src_token_account().key();
     let dst_token_account = deposit_stake_accounts.dst_token_account().key();
     let bridge_seed = get_seed_from_orderid(order_id);
-
     before_check(
         &prefund_withdraw_accounts.swap_authority_pubkey,
-        &prefund_withdraw_accounts.src_token_account(),
+        &prefund_withdraw_accounts.src_token_from,
         dst_token_account,
         hop_accounts,
         hop,
@@ -1517,8 +1521,7 @@ pub fn prefund_swap_via_stake_handler<'a>(
     prefund_withdraw_ix_data.extend_from_slice(&amount_in.to_le_bytes()); //amount in
     prefund_withdraw_ix_data.extend_from_slice(&bridge_seed);
 
-    let withdraw_accountmetas: Vec<AccountMeta> = prefund_withdraw_accounts
-        .get_accountmetas()
+    let withdraw_accountmetas: Vec<AccountMeta> = prefund_withdraw_accounts.get_accountmetas()
         .into_iter()
         .chain(withdraw_accounts.get_accountmetas())
         .collect();
@@ -1531,8 +1534,7 @@ pub fn prefund_swap_via_stake_handler<'a>(
         .chain(pool_deposit_accounts.get_accountmetas())
         .collect();
 
-    let withdraw_account_infos: Vec<AccountInfo<'a>> = prefund_withdraw_accounts
-        .get_accountinfos()
+    let withdraw_account_infos: Vec<AccountInfo<'a>> = prefund_withdraw_accounts.get_accountinfos()
         .into_iter()
         .chain(withdraw_accounts.get_accountinfos())
         .collect();
@@ -1546,9 +1548,10 @@ pub fn prefund_swap_via_stake_handler<'a>(
     let dex_processor = &SanctumRouterProcessor;
     
     invoke_processes(
+        amount_in,
         dex_processor,
         &[&withdraw_account_infos, &deposit_account_infos],
-        src_token_account,
+        prefund_withdraw_accounts.src_token_account_mut(),
         deposit_stake_accounts.dst_token_account_mut(),
         hop_accounts,
         &[
@@ -1604,36 +1607,36 @@ pub fn withdraw_wsol_handler<'a>(
     accounts_len += SPL_STAKEPOOL_WITHDRAW_SOL_ACCOUNTS_LEN;
     
 
-    let src_token_account = withdraw_wsol_accounts.src_token_account().key();
     let dst_token_account = withdraw_wsol_accounts.dst_token_account().key();
     before_check(
         &withdraw_wsol_accounts.swap_authority_pubkey,
-        &withdraw_wsol_accounts.src_token_account(),
+        &withdraw_wsol_accounts.src_token_from,
         dst_token_account,
         hop_accounts,
         hop,
         proxy_swap,
         owner_seeds,
     )?;
+
     let mut ix_data = Vec::<u8>::from(&8u8.to_le_bytes()); //withdraw wsol discriminator
     ix_data.extend_from_slice(&amount_in.to_le_bytes());
 
-    let withdraw_accout_metas: Vec<AccountMeta>   = withdraw_wsol_accounts
-        .get_accountmetas()
+    let withdraw_accout_metas: Vec<AccountMeta>   = withdraw_wsol_accounts.get_accountmetas()
         .into_iter()
         .chain(stake_dex_withdraw_accounts.get_accountmetas())
         .collect();
-    let withdraw_accout_infos: Vec<AccountInfo<'a>> = withdraw_wsol_accounts
-        .get_accountinfos()
+    let withdraw_accout_infos: Vec<AccountInfo<'a>> = withdraw_wsol_accounts.get_accountinfos()
         .into_iter()
         .chain(stake_dex_withdraw_accounts.get_accountinfos())
        .collect();
 
+    let (src_token_account, dst_token_account) = withdraw_wsol_accounts.get_token_accounts_mut();
     invoke_process(
+        amount_in,
         &SanctumRouterProcessor, 
         &withdraw_accout_infos, 
         src_token_account, 
-        withdraw_wsol_accounts.dst_token_account_mut(), 
+        dst_token_account, 
         hop_accounts, 
         Instruction {
             program_id: sanctum_router_program::id(),

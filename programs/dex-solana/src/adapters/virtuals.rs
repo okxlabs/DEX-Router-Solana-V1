@@ -89,7 +89,6 @@ pub fn swap<'a>(
 
     // check hop accounts & swap authority
     let swap_source_token = swap_accounts.swap_source_token.clone();
-    let swap_source_token_key = swap_accounts.swap_source_token.key();
     let swap_destination_token = swap_accounts.swap_destination_token.key();
     before_check(
         &swap_accounts.swap_authority_pubkey,
@@ -167,9 +166,10 @@ pub fn swap<'a>(
 
     let dex_processor = &VirtualsProcessor;
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_source_token_key,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,

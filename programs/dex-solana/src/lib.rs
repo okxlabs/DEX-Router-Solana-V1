@@ -223,6 +223,13 @@ pub mod dex_solana {
         )
     }
 
+    pub fn wrap_unwrap_v3<'a>(
+        ctx: Context<'_, '_, 'a, 'a, PlatformFeeWrapUnwrapAccounts<'a>>,
+        args: PlatformFeeWrapUnwrapArgs,
+    ) -> Result<()> {
+        instructions::platform_fee_wrap_unwrap_handler_v3(ctx, args)
+    }
+
     // ******************** Global Config ******************** //
     pub fn init_global_config(ctx: Context<InitGlobalConfig>, trade_fee: u64) -> Result<()> {
         global_config_instructions::init_global_config_handler(ctx, trade_fee)

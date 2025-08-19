@@ -25,6 +25,10 @@ pub const TOTAL_WEIGHT: u8 = 100;
 pub const SA_AUTHORITY_SEED: &[&[&[u8]]] = &[&[SEED_SA, &[BUMP_SA]]];
 pub const TOKEN_ACCOUNT_RENT: u64 = 2039280; // Token account rent (165 bytes)
 
+// Actual amount_in lower bound ratio for post swap check
+pub const ACTUAL_IN_LOWER_BOUND_NUM: u128 = 90; // 90%
+pub const ACTUAL_IN_LOWER_BOUND_DEN: u128 = 100; // denominator for percentage
+
 pub const SWAP_SELECTOR: &[u8; 8] = &[248, 198, 158, 145, 225, 117, 135, 200];
 pub const SWAP2_SELECTOR: &[u8; 8] = &[65, 75, 63, 76, 235, 91, 91, 136];
 pub const CPSWAP_SELECTOR: &[u8; 8] = &[143, 190, 90, 218, 196, 30, 51, 222];
@@ -63,6 +67,7 @@ pub const MANIFEST_SWAP_SELECTOR: &[u8; 1] = &[4];
 pub const TESSERA_SWAP_SELECTOR: &[u8; 1] = &[16];
 pub const SOL_RFQ_FILL_ORDER_SELECTOR: &[u8; 8] = &[232, 122, 115, 25, 199, 143, 136, 162];
 pub const MIN_SOL_ACCOUNT_RENT: u64 = 890880;
+pub const SOL_DIFF_LIMIT: u64 = 2_100_000;
 
 // ******************** Limit Order ******************** //
 pub const GLOBAL_CONFIG_SEED: &str = "global_config";
@@ -116,6 +121,32 @@ pub mod wsol_program {
 pub mod system_program {
     use anchor_lang::declare_id;
     declare_id!("11111111111111111111111111111111");
+}
+
+// ******************** dex program ids ******************** //
+
+pub mod spl_token_swap_program {
+    use anchor_lang::declare_id;
+    declare_id!("SwaPpA9LAaLfeLi3a68M4DjnLqgtticKg6CnyNwgAC8");
+}
+pub mod orca_swap_program {
+    use anchor_lang::declare_id;
+    declare_id!("9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP");
+}
+
+pub mod one_moon_swap_program {
+    use anchor_lang::declare_id;
+    declare_id!("1MooN32fuBBgApc8ujknKJw5sef3BVwPGgz3pto1BAh");
+}
+
+pub mod step_swap_program {
+    use anchor_lang::declare_id;
+    declare_id!("SSwpMgqNDsyV7mAgN9ady4bDVu5ySjmmXejXvy2vLt1");
+}
+
+pub mod saber_stable_program {
+    use anchor_lang::declare_id;
+    declare_id!("SSwpkEEcbUqx4vtoEByFjSkhKdCT862DNVb52nZg1UZ");
 }
 
 pub mod raydium_swap_program {

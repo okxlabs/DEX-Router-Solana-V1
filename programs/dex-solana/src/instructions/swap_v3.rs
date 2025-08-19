@@ -62,12 +62,14 @@ pub fn swap_tob_handler<'a>(
     platform_fee_rate: Option<u16>,
 ) -> Result<()> {
     let commission_direction = commission_info >> 31 == 1;
+    let acc_close_flag = ((commission_info & (1 << 30)) >> 30) == 1;
     let commission_rate = commission_info & ((1 << 30) - 1);
     log_rate_info_v3(
         commission_rate,
         platform_fee_rate,
         trim_rate,
         commission_direction,
+        acc_close_flag,
     );
 
     let trim_account = if trim_rate.is_some() && trim_rate.unwrap() > 0 {
@@ -99,6 +101,7 @@ pub fn swap_tob_handler<'a>(
         &ctx.accounts.platform_fee_account,
         trim_rate,
         trim_account,
+        acc_close_flag,
     )?;
     Ok(())
 }
@@ -117,6 +120,7 @@ pub fn swap_toc_handler<'a>(
         platform_fee_rate,
         None,
         commission_direction,
+        false,
     );
 
     common_swap_v3(
@@ -143,6 +147,7 @@ pub fn swap_toc_handler<'a>(
         &ctx.accounts.platform_fee_account,
         None,
         None,
+        false,
     )?;
     Ok(())
 }

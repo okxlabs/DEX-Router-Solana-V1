@@ -1,5 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
+use crate::saber_stable_program;
 use crate::HopAccounts;
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token::Token;
@@ -76,6 +77,9 @@ pub fn swap<'a>(
         ErrorCode::InvalidAccountsLength
     );
     let mut swap_accounts = StableSwapAccounts::parse_accounts(remaining_accounts, *offset)?;
+    if swap_accounts.dex_program_id.key != &saber_stable_program::id() {
+        return Err(ErrorCode::InvalidProgramId.into());
+    }
     // log pool address
     swap_accounts.swap_info.key().log();
 
@@ -145,9 +149,10 @@ pub fn swap<'a>(
 
     let dex_processor = &StableSwapProcessor;
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,

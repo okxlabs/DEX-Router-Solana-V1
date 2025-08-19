@@ -38,25 +38,8 @@ const ACCOUNTS_LEN: usize = 17;
 
 impl<'info> SolRfqAccount<'info> {
     fn parse_accounts(accounts: &'info [AccountInfo<'info>], offset: usize) -> Result<Self> {
-        let [
-            dex_program_id,
-            swap_authority_pubkey,
-            swap_source_token,
-            swap_destination_token,
-            sol_rfq_param1,
-            sol_rfq_param2,
-            maker,
-            taker,
-            maker_mint,
-            taker_mint,
-            maker_send_token_account,
-            taker_receive_token_account,
-            taker_send_token_account,
-            maker_receive_token_account,
-            maker_token_program,
-            taker_token_program,
-            system_program,
-        ] = array_ref![accounts, offset, ACCOUNTS_LEN];
+        let [dex_program_id, swap_authority_pubkey, swap_source_token, swap_destination_token, sol_rfq_param1, sol_rfq_param2, maker, taker, maker_mint, taker_mint, maker_send_token_account, taker_receive_token_account, taker_send_token_account, maker_receive_token_account, maker_token_program, taker_token_program, system_program] =
+            array_ref![accounts, offset, ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -103,7 +86,6 @@ pub fn fill_order<'a>(
     swap_accounts.dex_program_id.key().log();
 
     // check hop accounts & swap authority
-    let swap_source_token = swap_accounts.swap_source_token.key();
     let swap_destination_token = swap_accounts.swap_destination_token.key();
     before_check(
         &swap_accounts.swap_authority_pubkey,
@@ -116,17 +98,41 @@ pub fn fill_order<'a>(
     )?;
 
     let sol_rfq_param1 = swap_accounts.sol_rfq_param1.key().as_array().clone();
-    let rfq_id = u64::from_le_bytes(sol_rfq_param1[0..8].try_into().map_err(|_| ErrorCode::InvalidRfqParameters)?);
-    let expected_maker_amount = u64::from_le_bytes(sol_rfq_param1[8..16].try_into().map_err(|_| ErrorCode::InvalidRfqParameters)?);
-    let expected_taker_amount = u64::from_le_bytes(sol_rfq_param1[16..24].try_into().map_err(|_| ErrorCode::InvalidRfqParameters)?);
+    let rfq_id = u64::from_le_bytes(
+        sol_rfq_param1[0..8]
+            .try_into()
+            .map_err(|_| ErrorCode::InvalidRfqParameters)?,
+    );
+    let expected_maker_amount = u64::from_le_bytes(
+        sol_rfq_param1[8..16]
+            .try_into()
+            .map_err(|_| ErrorCode::InvalidRfqParameters)?,
+    );
+    let expected_taker_amount = u64::from_le_bytes(
+        sol_rfq_param1[16..24]
+            .try_into()
+            .map_err(|_| ErrorCode::InvalidRfqParameters)?,
+    );
     let unused = &sol_rfq_param1[24..32];
 
     require!(unused == &[0u8; 8], ErrorCode::InvalidRfqParameters);
-    
+
     let sol_rfq_param2 = swap_accounts.sol_rfq_param2.key().as_array().clone();
-    let maker_send_amount = u64::from_le_bytes(sol_rfq_param2[0..8].try_into().map_err(|_| ErrorCode::InvalidRfqParameters)?);
-    let taker_send_amount = u64::from_le_bytes(sol_rfq_param2[8..16].try_into().map_err(|_| ErrorCode::InvalidRfqParameters)?);
-    let expiry = u64::from_le_bytes(sol_rfq_param2[16..24].try_into().map_err(|_| ErrorCode::InvalidRfqParameters)?);
+    let maker_send_amount = u64::from_le_bytes(
+        sol_rfq_param2[0..8]
+            .try_into()
+            .map_err(|_| ErrorCode::InvalidRfqParameters)?,
+    );
+    let taker_send_amount = u64::from_le_bytes(
+        sol_rfq_param2[8..16]
+            .try_into()
+            .map_err(|_| ErrorCode::InvalidRfqParameters)?,
+    );
+    let expiry = u64::from_le_bytes(
+        sol_rfq_param2[16..24]
+            .try_into()
+            .map_err(|_| ErrorCode::InvalidRfqParameters)?,
+    );
     let unused = &sol_rfq_param2[24..32];
 
     require!(unused == &[0u8; 8], ErrorCode::InvalidRfqParameters);
@@ -179,9 +185,10 @@ pub fn fill_order<'a>(
 
     let dex_processor = &SolRfqProcessor;
     let _ = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,

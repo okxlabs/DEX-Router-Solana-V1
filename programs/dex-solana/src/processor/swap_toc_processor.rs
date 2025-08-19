@@ -364,6 +364,7 @@ impl<'info> PlatformFeeV3Processor<'info> for SwapToCProcessor {
         platform_fee_account: &Option<AccountInfo<'info>>,
         _trim_rate: Option<u8>,
         _trim_account: Option<&AccountInfo<'info>>,
+        _acc_close_flag: bool,
     ) -> Result<u64> {
         // Proxy handle after swap
         ProxySwapProcessor.proxy_handle_after(

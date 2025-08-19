@@ -12,6 +12,7 @@ pub mod platform_fee_wrap_unwrap_v2;
 pub mod proxy_swap;
 pub mod swap;
 pub mod swap_v3;
+pub mod wrap_unwrap_v3;
 
 pub use commission_from_swap::*;
 pub use commission_proxy_swap::*;
@@ -27,3 +28,4 @@ pub use platform_fee_wrap_unwrap_v2::*;
 pub use proxy_swap::*;
 pub use swap::*;
 pub use swap_v3::*;
+pub use wrap_unwrap_v3::*;

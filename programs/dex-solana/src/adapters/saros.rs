@@ -14,7 +14,6 @@ impl DexProcessor for SarosProcessor {}
 
 const ARGS_LEN: usize = 17;
 
-
 pub struct SarosAccounts<'info> {
     pub dex_program_id: &'info AccountInfo<'info>,
     pub swap_authority_pubkey: &'info AccountInfo<'info>,
@@ -135,9 +134,10 @@ pub fn swap<'a>(
 
     let dex_processor = &SarosProcessor;
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_accounts.swap_source_token.key(),
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,
@@ -199,7 +199,7 @@ impl<'info> SarosDlmmAccounts<'info> {
             event_authority,
             program,
         ]: & [AccountInfo<'info>; DLMM_ACCOUNTS_LEN] = array_ref![accounts, offset, DLMM_ACCOUNTS_LEN];
-        Ok(Self {  
+        Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
             swap_source_token: InterfaceAccount::try_from(swap_source_token)?,
@@ -220,7 +220,6 @@ impl<'info> SarosDlmmAccounts<'info> {
     }
 }
 
-
 pub fn dlmm_swap<'a>(
     remaining_accounts: &'a [AccountInfo<'a>],
     amount_in: u64,
@@ -230,7 +229,11 @@ pub fn dlmm_swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!("Dex::Saros DLMM amount_in: {}, offset: {}", amount_in, offset);
+    msg!(
+        "Dex::Saros DLMM amount_in: {}, offset: {}",
+        amount_in,
+        offset
+    );
     require!(
         remaining_accounts.len() >= *offset + DLMM_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -255,9 +258,15 @@ pub fn dlmm_swap<'a>(
     let direction = swap_accounts.swap_source_token.mint == swap_accounts.token_mint_x.key();
 
     let (source_token_account, destination_token_account) = if direction {
-        (swap_accounts.swap_source_token.clone(), swap_accounts.swap_destination_token.clone())
+        (
+            swap_accounts.swap_source_token.clone(),
+            swap_accounts.swap_destination_token.clone(),
+        )
     } else {
-        (swap_accounts.swap_destination_token.clone(), swap_accounts.swap_source_token.clone())
+        (
+            swap_accounts.swap_destination_token.clone(),
+            swap_accounts.swap_source_token.clone(),
+        )
     };
 
     let mut data = Vec::with_capacity(ARGS_LEN_DLMM);
@@ -313,9 +322,10 @@ pub fn dlmm_swap<'a>(
 
     let dex_processor = &SarosDlmmProcessor;
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_accounts.swap_source_token.key(),
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,

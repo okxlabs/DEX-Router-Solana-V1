@@ -638,13 +638,16 @@ pub fn add_liquidity_handler<'a>(
             ix_data.extend_from_slice(&1u64.to_le_bytes()); //min lp out
 
             let accounts = swap_accounts.get_accountmetas();
+            let account_infos = swap_accounts.get_account_infos();
+            let (source_token_account, dst_token_account) = swap_accounts.get_token_accounts_mut();
 
             let dex_processor = &SanctumProcessor;
             invoke_process(
+                amount_in,
                 dex_processor,
-                &swap_accounts.get_account_infos(),
-                swap_accounts.source_token_account().key(),
-                swap_accounts.dst_token_account_mut(),
+                &account_infos,
+                source_token_account,
+                dst_token_account,
                 hop_accounts,
                 Instruction {
                     program_id: sanctum_program::id(),
@@ -673,13 +676,16 @@ pub fn add_liquidity_handler<'a>(
             ix_data.extend_from_slice(&1u64.to_le_bytes()); //min lp out
 
             let accounts = swap_accounts.get_accountmetas();
+            let account_infos = swap_accounts.get_account_infos();
+            let (source_token_account, dst_token_account) = swap_accounts.get_token_accounts_mut();
 
             let dex_processor = &SanctumProcessor;
             invoke_process(
+                amount_in,
                 dex_processor,
-                &swap_accounts.get_account_infos(),
-                swap_accounts.source_token_account().key(),
-                swap_accounts.dst_token_account_mut(),
+                &account_infos,
+                source_token_account,
+                dst_token_account,
                 hop_accounts,
                 Instruction {
                     program_id: sanctum_program::id(),
@@ -732,13 +738,16 @@ pub fn remove_liquidity_handler<'a>(
             ix_data.extend_from_slice(&1u64.to_le_bytes()); //min lp out
 
             let accounts = swap_accounts.get_accountmetas();
+            let account_infos = swap_accounts.get_account_infos();
+            let (source_token_account, dst_token_account) = swap_accounts.get_token_accounts_mut();
 
             let dex_processor = &SanctumProcessor;
             invoke_process(
+                amount_in,
                 dex_processor,
-                &swap_accounts.get_account_infos(),
-                swap_accounts.source_token_account().key(),
-                swap_accounts.dst_token_account_mut(),
+                &account_infos,
+                source_token_account,
+                dst_token_account,
                 hop_accounts,
                 Instruction {
                     program_id: sanctum_program::id(),
@@ -768,12 +777,15 @@ pub fn remove_liquidity_handler<'a>(
             ix_data.extend_from_slice(&1u64.to_le_bytes()); //min lp out
 
             let accounts = swap_accounts.get_accountmetas();
+            let account_infos = swap_accounts.get_account_infos();
+            let (source_token_account, dst_token_account) = swap_accounts.get_token_accounts_mut();
             let dex_processor = &SanctumProcessor;
             invoke_process(
+                amount_in,
                 dex_processor,
-                &swap_accounts.get_account_infos(),
-                swap_accounts.source_token_account().key(),
-                swap_accounts.dst_token_account_mut(),
+                &account_infos,
+                source_token_account,
+                dst_token_account,
                 hop_accounts,
                 Instruction {
                     program_id: sanctum_program::id(),
@@ -941,8 +953,13 @@ trait CommonAccountInfo<'info> {
     fn dex_program_id(&self) -> &AccountInfo<'info>;
     fn swap_authority_pubkey(&self) -> &AccountInfo<'info>;
     fn source_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>>;
-    fn dst_token_account_mut(&mut self) -> &mut Box<InterfaceAccount<'info, TokenAccount>>;
     fn dst_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>>;
+    fn get_token_accounts_mut(
+        &mut self,
+    ) -> (
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+    );
     fn get_accountmetas(&self) -> Vec<AccountMeta>;
     fn get_account_infos(&self) -> Vec<AccountInfo<'info>>;
 }
@@ -957,11 +974,16 @@ impl<'info> CommonAccountInfo<'info> for SanctumAddLstLiqAccounts<'info> {
     fn source_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.source_lst_acc
     }
-    fn dst_token_account_mut(&mut self) -> &mut Box<InterfaceAccount<'info, TokenAccount>> {
-        &mut self.dst_lp_acc
-    }
     fn dst_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.dst_lp_acc
+    }
+    fn get_token_accounts_mut(
+        &mut self,
+    ) -> (
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+    ) {
+        (&mut self.source_lst_acc, &mut self.dst_lp_acc)
     }
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
         vec![
@@ -1017,11 +1039,16 @@ impl<'info> CommonAccountInfo<'info> for SanctumAddWsolLiqAccounts<'info> {
     fn source_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.source_lst_acc
     }
-    fn dst_token_account_mut(&mut self) -> &mut Box<InterfaceAccount<'info, TokenAccount>> {
-        &mut self.dst_lp_acc
-    }
     fn dst_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.dst_lp_acc
+    }
+    fn get_token_accounts_mut(
+        &mut self,
+    ) -> (
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+    ) {
+        (&mut self.source_lst_acc, &mut self.dst_lp_acc)
     }
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
         vec![
@@ -1069,11 +1096,16 @@ impl<'info> CommonAccountInfo<'info> for SanctumRemoveWsolLiqAccounts<'info> {
     fn source_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.source_lp_acc
     }
-    fn dst_token_account_mut(&mut self) -> &mut Box<InterfaceAccount<'info, TokenAccount>> {
-        &mut self.dst_lst_acc
-    }
     fn dst_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.dst_lst_acc
+    }
+    fn get_token_accounts_mut(
+        &mut self,
+    ) -> (
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+    ) {
+        (&mut self.source_lp_acc, &mut self.dst_lst_acc)
     }
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
         vec![
@@ -1123,12 +1155,16 @@ impl<'info> CommonAccountInfo<'info> for SanctumRemoveLstLiqAccounts<'info> {
     fn source_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.source_lp_acc
     }
-    fn dst_token_account_mut(&mut self) -> &mut Box<InterfaceAccount<'info, TokenAccount>> {
-        &mut self.dst_lst_acc
-    }
-
     fn dst_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.dst_lst_acc
+    }
+    fn get_token_accounts_mut(
+        &mut self,
+    ) -> (
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+    ) {
+        (&mut self.source_lp_acc, &mut self.dst_lst_acc)
     }
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
         vec![
@@ -1186,11 +1222,16 @@ impl<'info> CommonAccountInfo<'info> for SanctumWsolLstSwapAccounts<'info> {
     fn source_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.source_lst_account
     }
-    fn dst_token_account_mut(&mut self) -> &mut Box<InterfaceAccount<'info, TokenAccount>> {
-        &mut self.dst_lst_account
-    }
     fn dst_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.dst_lst_account
+    }
+    fn get_token_accounts_mut(
+        &mut self,
+    ) -> (
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+    ) {
+        (&mut self.source_lst_account, &mut self.dst_lst_account)
     }
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
         vec![
@@ -1254,11 +1295,16 @@ impl<'info> CommonAccountInfo<'info> for SanctumLstWsolSwapAccounts<'info> {
     fn source_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.source_lst_account
     }
-    fn dst_token_account_mut(&mut self) -> &mut Box<InterfaceAccount<'info, TokenAccount>> {
-        &mut self.dst_lst_account
-    }
     fn dst_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.dst_lst_account
+    }
+    fn get_token_accounts_mut(
+        &mut self,
+    ) -> (
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+    ) {
+        (&mut self.source_lst_account, &mut self.dst_lst_account)
     }
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
         vec![
@@ -1322,11 +1368,16 @@ impl<'info> CommonAccountInfo<'info> for SanctumLstLstSwapAccounts<'info> {
     fn source_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.source_lst_account
     }
-    fn dst_token_account_mut(&mut self) -> &mut Box<InterfaceAccount<'info, TokenAccount>> {
-        &mut self.dst_lst_account
-    }
     fn dst_token_account(&self) -> &Box<InterfaceAccount<'info, TokenAccount>> {
         &self.dst_lst_account
+    }
+    fn get_token_accounts_mut(
+        &mut self,
+    ) -> (
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+        &mut Box<InterfaceAccount<'info, TokenAccount>>,
+    ) {
+        (&mut self.source_lst_account, &mut self.dst_lst_account)
     }
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
         vec![
@@ -1422,13 +1473,16 @@ fn handle_lst_lst_swap<'info>(
     ix_data.extend_from_slice(&amount_in.to_le_bytes()); //lst_amount
 
     let accounts = swap_accounts.get_accountmetas();
+    let account_infos = swap_accounts.get_account_infos();
+    let (source_token_account, dst_token_account) = swap_accounts.get_token_accounts_mut();
 
     let dex_processor = &SanctumProcessor;
     invoke_process(
+        amount_in,
         dex_processor,
-        &swap_accounts.get_account_infos(),
-        swap_accounts.source_token_account().key(),
-        swap_accounts.dst_token_account_mut(),
+        &account_infos,
+        source_token_account,
+        dst_token_account,
         hop_accounts,
         Instruction {
             program_id: sanctum_program::id(),
@@ -1472,13 +1526,16 @@ fn handle_wsol_lst_swap<'info>(
     ix_data.extend_from_slice(&amount_in.to_le_bytes()); //lst_amount
 
     let accounts = swap_accounts.get_accountmetas();
+    let account_infos = swap_accounts.get_account_infos();
+    let (source_token_account, dst_token_account) = swap_accounts.get_token_accounts_mut();
 
     let dex_processor = &SanctumProcessor;
     invoke_process(
+        amount_in,
         dex_processor,
-        &swap_accounts.get_account_infos(),
-        swap_accounts.source_token_account().key(),
-        swap_accounts.dst_token_account_mut(),
+        &account_infos,
+        source_token_account,
+        dst_token_account,
         hop_accounts,
         Instruction {
             program_id: sanctum_program::id(),
@@ -1522,13 +1579,16 @@ fn handle_lst_wsol_swap<'info>(
     ix_data.extend_from_slice(&amount_in.to_le_bytes()); //lst_amount
 
     let accounts = swap_accounts.get_accountmetas();
+    let account_infos = swap_accounts.get_account_infos();
+    let (source_token_account, dst_token_account) = swap_accounts.get_token_accounts_mut();
 
     let dex_processor = &SanctumProcessor;
     invoke_process(
+        amount_in,
         dex_processor,
-        &swap_accounts.get_account_infos(),
-        swap_accounts.source_token_account().key(),
-        swap_accounts.dst_token_account_mut(),
+        &account_infos,
+        source_token_account,
+        dst_token_account,
         hop_accounts,
         Instruction {
             program_id: sanctum_program::id(),

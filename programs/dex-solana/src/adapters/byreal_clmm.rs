@@ -107,7 +107,11 @@ pub fn swap_v2<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!("Dex::ByrealClmm amount_in: {}, offset: {}", amount_in, offset);
+    msg!(
+        "Dex::ByrealClmm amount_in: {}, offset: {}",
+        amount_in,
+        offset
+    );
     require!(
         remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -120,9 +124,7 @@ pub fn swap_v2<'a>(
     swap_accounts.pool_state.key().log();
 
     // check hop accounts & swap authority
-    let swap_source_token = swap_accounts.swap_source_token.key();
     let swap_destination_token = swap_accounts.swap_destination_token.key();
-
     before_check(
         &swap_accounts.swap_authority_pubkey,
         &swap_accounts.swap_source_token,
@@ -133,7 +135,7 @@ pub fn swap_v2<'a>(
         owner_seeds,
     )?;
 
-    let mut accounts = vec! [
+    let mut accounts = vec![
         AccountMeta::new_readonly(swap_accounts.payer.key(), true),
         AccountMeta::new_readonly(swap_accounts.amm_config.key(), false),
         AccountMeta::new(swap_accounts.pool_state.key(), false),
@@ -149,7 +151,7 @@ pub fn swap_v2<'a>(
         AccountMeta::new_readonly(swap_accounts.output_vault_mint.key(), false),
         AccountMeta::new(swap_accounts.tickarray_bitmap_extension.key(), false),
     ];
-    
+
     let mut account_infos = vec![
         swap_accounts.payer.to_account_info(),
         swap_accounts.amm_config.to_account_info(),
@@ -168,50 +170,32 @@ pub fn swap_v2<'a>(
     ];
 
     if swap_accounts.tick_array0.key != &byreal_clmm_program::id() {
-        accounts.push(AccountMeta::new(
-            swap_accounts.tick_array0.key(),
-            false,
-        ));
+        accounts.push(AccountMeta::new(swap_accounts.tick_array0.key(), false));
         account_infos.push(swap_accounts.tick_array0.to_account_info());
     }
 
     if swap_accounts.tick_array1.key != &byreal_clmm_program::id() {
-        accounts.push(AccountMeta::new(
-            swap_accounts.tick_array1.key(),
-            false,
-        ));
+        accounts.push(AccountMeta::new(swap_accounts.tick_array1.key(), false));
         account_infos.push(swap_accounts.tick_array1.to_account_info());
     }
 
     if swap_accounts.tick_array2.key != &byreal_clmm_program::id() {
-        accounts.push(AccountMeta::new(
-            swap_accounts.tick_array2.key(),
-            false,
-        ));
+        accounts.push(AccountMeta::new(swap_accounts.tick_array2.key(), false));
         account_infos.push(swap_accounts.tick_array2.to_account_info());
     }
 
     if swap_accounts.tick_array3.key != &byreal_clmm_program::id() {
-        accounts.push(AccountMeta::new(
-            swap_accounts.tick_array3.key(),
-            false,
-        ));
+        accounts.push(AccountMeta::new(swap_accounts.tick_array3.key(), false));
         account_infos.push(swap_accounts.tick_array3.to_account_info());
     }
 
     if swap_accounts.tick_array4.key != &byreal_clmm_program::id() {
-        accounts.push(AccountMeta::new(
-            swap_accounts.tick_array4.key(),
-            false,
-        ));
+        accounts.push(AccountMeta::new(swap_accounts.tick_array4.key(), false));
         account_infos.push(swap_accounts.tick_array4.to_account_info());
     }
 
     if swap_accounts.tick_array5.key != &byreal_clmm_program::id() {
-        accounts.push(AccountMeta::new(
-            swap_accounts.tick_array5.key(),
-            false,
-        ));
+        accounts.push(AccountMeta::new(swap_accounts.tick_array5.key(), false));
         account_infos.push(swap_accounts.tick_array5.to_account_info());
     }
 
@@ -230,9 +214,10 @@ pub fn swap_v2<'a>(
 
     let dex_processor = ByrealClmmSwapV2Processor {};
     let amount_out = invoke_process(
+        amount_in,
         &dex_processor,
         &account_infos,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,

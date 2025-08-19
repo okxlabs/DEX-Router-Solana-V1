@@ -3,8 +3,7 @@ use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
 use crate::utils::{close_token_account, sync_wsol_account, transfer_sol};
 use crate::{
-    authority_pda, boopfun_program, wsol_sa, HopAccounts, BOOPFUN_BUY_SELECTOR,
-    BOOPFUN_SELL_SELECTOR, SA_AUTHORITY_SEED, ZERO_ADDRESS,
+    authority_pda, boopfun_program, wsol_sa, HopAccounts, BOOPFUN_BUY_SELECTOR, BOOPFUN_SELL_SELECTOR, MIN_SOL_ACCOUNT_RENT, SA_AUTHORITY_SEED, SOL_DIFF_LIMIT, ZERO_ADDRESS
 };
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::Instruction;
@@ -112,10 +111,8 @@ impl DexProcessor for BoopfunBuyProcessor {
         let authority = account_infos.get(6).unwrap();
 
         if authority.key() == authority_pda::ID {
-            require!(
-                source_token_account.key() != wsol_sa::ID,
-                ErrorCode::InvalidSourceTokenAccount
-            );
+            let before_sa_authority_lamports = authority.lamports();
+            require!(source_token_account.key() != wsol_sa::ID, ErrorCode::InvalidSourceTokenAccount);
             close_token_account(
                 source_token_account.to_account_info(),
                 authority.to_account_info(),
@@ -123,7 +120,9 @@ impl DexProcessor for BoopfunBuyProcessor {
                 token_program.to_account_info(),
                 Some(SA_AUTHORITY_SEED),
             )?;
-        } else {
+            Ok(before_sa_authority_lamports)
+        } 
+        else {
             close_token_account(
                 source_token_account.to_account_info(),
                 authority.to_account_info(),
@@ -131,6 +130,35 @@ impl DexProcessor for BoopfunBuyProcessor {
                 token_program.to_account_info(),
                 None,
             )?;
+            Ok(0)
+        }
+    }
+
+    fn after_invoke(
+        &self,
+        account_infos: &[AccountInfo],
+        _hop: usize,
+        _owner_seeds: Option<&[&[&[u8]]]>,
+        before_sa_authority_lamports: u64,
+    ) -> Result<u64> {
+        if before_sa_authority_lamports > 0 {
+            let payer = account_infos.get(14).unwrap();
+            let authority = account_infos.get(6).unwrap();
+
+            if authority.key() == authority_pda::ID {  
+                let after_sa_authority_lamports = authority.lamports();
+                let diff_sa_lamports = after_sa_authority_lamports.saturating_sub(before_sa_authority_lamports);
+                if diff_sa_lamports > 0 {
+                    require!(authority.lamports().checked_sub(diff_sa_lamports).unwrap() >= MIN_SOL_ACCOUNT_RENT, ErrorCode::InsufficientFunds);
+                    require!(diff_sa_lamports <= SOL_DIFF_LIMIT, ErrorCode::InvalidDiffLamports);
+                    transfer_sol(
+                        authority.to_account_info(),
+                        payer.to_account_info(),
+                        diff_sa_lamports,
+                        Some(SA_AUTHORITY_SEED),
+                    )?;
+                }
+            }
         }
         Ok(0)
     }
@@ -344,6 +372,7 @@ pub fn buy<'a>(
     hop: usize,
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
+    payer: Option<&AccountInfo<'a>>,
 ) -> Result<u64> {
     msg!("Dex::Boopfun amount_in: {}, offset: {}", amount_in, offset);
     require!(
@@ -405,6 +434,7 @@ pub fn buy<'a>(
         swap_accounts.token_program.to_account_info(),
         swap_accounts.associated_token_program.to_account_info(),
         swap_accounts.dex_program_id.to_account_info(),
+        payer.unwrap().to_account_info(),
         swap_accounts.swap_source_token.to_account_info(),
     ];
 
@@ -416,9 +446,10 @@ pub fn buy<'a>(
 
     let dex_processor = &BoopfunBuyProcessor;
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_accounts.swap_source_token.key(),
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,
@@ -520,9 +551,10 @@ pub fn sell<'a>(
         amount: expected_amount_out,
     };
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_accounts.swap_source_token.key(),
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,
@@ -551,6 +583,7 @@ impl DexProcessor for BoopfunSellProcessor {
         account_infos: &[AccountInfo],
         hop: usize,
         owner_seeds: Option<&[&[&[u8]]]>,
+        _before_sa_authority_lamports: u64,
     ) -> Result<u64> {
         let destination_token_account = account_infos.last().unwrap();
         let authority = account_infos.get(6).unwrap();

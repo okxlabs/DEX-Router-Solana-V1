@@ -200,7 +200,7 @@ pub fn create_sa_if_needed<'info>(
 }
 
 /// Check if the token account is initialized
-fn is_token_account_initialized(account: &AccountInfo) -> bool {
+pub fn is_token_account_initialized(account: &AccountInfo) -> bool {
     // Check if the account has been rented (has allocated space) or is empty
     if account.lamports() == 0 || account.data_is_empty() {
         return false;
@@ -278,3 +278,8 @@ pub fn is_ata(account: &AccountInfo) -> bool {
     account.as_ref().owner == &crate::token_program::ID
         || account.as_ref().owner == &crate::token_2022_program::ID
 }
+
+pub fn is_system_account(account: &AccountInfo) -> bool {
+    account.as_ref().owner == &crate::system_program::ID
+}
+

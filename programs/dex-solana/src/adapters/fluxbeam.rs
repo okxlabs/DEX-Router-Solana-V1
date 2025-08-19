@@ -107,17 +107,17 @@ pub fn swap<'a>(
     )?;
 
     let pool_source_pubkey;
-    let pool_destination_pubkeyy;
+    let pool_destination_pubkey;
     if (swap_accounts.swap_source_token.mint == swap_accounts.token_a_account.mint)
         && (swap_accounts.swap_destination_token.mint == swap_accounts.token_b_account.mint)
     {
         pool_source_pubkey = swap_accounts.token_a_account.key();
-        pool_destination_pubkeyy = swap_accounts.token_b_account.key();
+        pool_destination_pubkey = swap_accounts.token_b_account.key();
     } else if (swap_accounts.swap_source_token.mint == swap_accounts.token_b_account.mint)
         && (swap_accounts.swap_destination_token.mint == swap_accounts.token_a_account.mint)
     {
         pool_source_pubkey = swap_accounts.token_b_account.key();
-        pool_destination_pubkeyy = swap_accounts.token_a_account.key();
+        pool_destination_pubkey = swap_accounts.token_a_account.key();
     } else {
         return Err(ErrorCode::InvalidPool.into());
     }
@@ -133,7 +133,7 @@ pub fn swap<'a>(
         AccountMeta::new(swap_accounts.swap_authority_pubkey.key(), true),
         AccountMeta::new(swap_source_token, false),
         AccountMeta::new(pool_source_pubkey, false),
-        AccountMeta::new(pool_destination_pubkeyy, false),
+        AccountMeta::new(pool_destination_pubkey, false),
         AccountMeta::new(swap_destination_token, false),
         AccountMeta::new(swap_accounts.pool_mint.key(), false),
         AccountMeta::new(swap_accounts.pool_fee.key(), false),
@@ -169,9 +169,10 @@ pub fn swap<'a>(
 
     let dex_processor = &FluxBeamProcessor;
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_source_token,
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,

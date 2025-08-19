@@ -74,6 +74,8 @@ pub enum Dex {
     PancakeSwapV3SwapV2,
     Tessera,
     SolRfq,
+    PumpfunBuy2,
+    PumpfunammBuy2,
 }
 
 #[derive(Debug)]
@@ -197,6 +199,7 @@ pub fn common_swap<'info, T: CommonSwapProcessor<'info>>(
         order_id,
         source_token_sa.is_some(),
         owner_seeds,
+        Some(payer),
     )?;
 
     // after swap hook
@@ -269,6 +272,7 @@ pub fn common_swap_v3<'info, T: PlatformFeeV3Processor<'info>>(
     platform_fee_account: &Option<AccountInfo<'info>>,
     trim_rate: Option<u8>,
     trim_account: Option<&AccountInfo<'info>>,
+    acc_close_flag: bool,
 ) -> Result<u64> {
     log_swap_basic_info(
         order_id,
@@ -341,6 +345,7 @@ pub fn common_swap_v3<'info, T: PlatformFeeV3Processor<'info>>(
         order_id,
         source_token_sa.is_some(),
         None,
+        Some(payer),
     )?;
 
     // after swap hook
@@ -360,6 +365,7 @@ pub fn common_swap_v3<'info, T: PlatformFeeV3Processor<'info>>(
         platform_fee_account,
         trim_rate,
         trim_account,
+        acc_close_flag,
     )?;
 
     // source token account has been closed in pumpfun buy
@@ -412,6 +418,7 @@ fn execute_swap<'info>(
     order_id: u64,
     proxy_from: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
+    payer: Option<&AccountInfo<'info>>,
 ) -> Result<u64> {
     destination_account.reload()?;
     let before_destination_balance = destination_account.amount;
@@ -502,6 +509,7 @@ fn execute_swap<'info>(
                     proxy_from,
                     order_id,
                     owner_seeds,
+                    payer,
                 )?;
 
                 // Emit SwapEvent
@@ -557,6 +565,7 @@ fn distribute_swap<'a>(
     proxy_from: bool,
     order_id: u64,
     owner_seeds: Option<&[&[&[u8]]]>,
+    payer: Option<&AccountInfo<'a>>,
 ) -> Result<u64> {
     let swap_function = match dex {
         Dex::SplTokenSwap => spl_token_swap::swap,
@@ -583,7 +592,18 @@ fn distribute_swap<'a>(
         Dex::SanctumNonWsolSwap => sanctum::swap_without_wsol_handler,
         Dex::SanctumWsolSwap => sanctum::swap_with_wsol_handler,
         Dex::PumpfunBuy => pumpfun::buy,
-        Dex::PumpfunSell => pumpfun::sell,
+        Dex::PumpfunSell => {
+            return pumpfun::sell(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                payer,
+            )
+        },
         Dex::Saros => saros::swap,
         Dex::StabbleSwap => stabble::swap,
         Dex::SanctumRouter => {
@@ -605,7 +625,18 @@ fn distribute_swap<'a>(
         Dex::QualiaSwap => qualia::swap,
         Dex::Zerofi => zerofi::swap,
         Dex::PumpfunammBuy => pumpfunamm::buy,
-        Dex::PumpfunammSell => pumpfunamm::sell,
+        Dex::PumpfunammSell => {
+            return pumpfunamm::sell(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                payer,
+            )
+        },
         Dex::Virtuals => virtuals::swap,
         Dex::VertigoBuy => vertigo::buy,
         Dex::VertigoSell => vertigo::sell,
@@ -630,7 +661,7 @@ fn distribute_swap<'a>(
                 hop,
                 proxy_from,
                 false,
-                owner_seeds,
+                owner_seeds, 
             );
         }
         Dex::PerpetualsSwap => perpetuals::perpetuals_swap_handler,
@@ -640,7 +671,18 @@ fn distribute_swap<'a>(
         Dex::MeteoraDlmmSwap2 => meteora::dlmm_swap2,
         Dex::MeteoraDAMMV2 => meteora::swap_v2_damm,
         Dex::Gavel => gavel::swap,
-        Dex::BoopfunBuy => boopfun::buy,
+        Dex::BoopfunBuy => {
+            return boopfun::buy(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                payer,
+            )
+        },
         Dex::BoopfunSell => boopfun::sell,
         Dex::MeteoraDbc2 => meteora_dbc::swap2,
         Dex::GooseFX => goosefx::swap,
@@ -656,6 +698,19 @@ fn distribute_swap<'a>(
         Dex::PancakeSwapV3SwapV2 => pancake_swap_v3::swap_v2,
         Dex::Tessera => tessera::swap,
         Dex::SolRfq => sol_rfq::fill_order,
+        Dex::PumpfunBuy2 => {
+            return pumpfun::buy2(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                payer,
+            )
+        },
+        Dex::PumpfunammBuy2 => pumpfunamm::buy2,
     };
     swap_function(
         remaining_accounts,

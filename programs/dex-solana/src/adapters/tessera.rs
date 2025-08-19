@@ -1,12 +1,11 @@
-use anchor_lang::{ prelude::*, solana_program::instruction::Instruction };
-use anchor_spl::token::Token;
-use anchor_spl::token_interface::{ Mint, TokenAccount };
+use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use arrayref::array_ref;
-use borsh::{ BorshDeserialize, BorshSerialize };
+use borsh::{BorshDeserialize, BorshSerialize};
 
-use crate::adapters::common::{ before_check, invoke_process };
-use crate::{ tessera_program, HopAccounts, TESSERA_SWAP_SELECTOR };
+use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
+use crate::{tessera_program, HopAccounts, TESSERA_SWAP_SELECTOR};
 
 use super::common::DexProcessor;
 
@@ -34,8 +33,8 @@ pub struct TesseraAccounts<'info> {
     pub quote_vault: &'info AccountInfo<'info>,
     pub base_mint: InterfaceAccount<'info, Mint>,
     pub quote_mint: InterfaceAccount<'info, Mint>,
-    pub base_token_program: Program<'info, Token>,
-    pub quote_token_program: Program<'info, Token>,
+    pub base_token_program: Interface<'info, TokenInterface>,
+    pub quote_token_program: Interface<'info, TokenInterface>,
     pub sysvar_instructions: &'info AccountInfo<'info>,
 }
 const ACCOUNTS_LEN: usize = 13;
@@ -69,8 +68,8 @@ impl<'info> TesseraAccounts<'info> {
             quote_vault,
             base_mint: InterfaceAccount::try_from(base_mint)?,
             quote_mint: InterfaceAccount::try_from(quote_mint)?,
-            base_token_program: Program::try_from(base_token_program)?,
-            quote_token_program: Program::try_from(quote_token_program)?,
+            base_token_program: Interface::try_from(base_token_program)?,
+            quote_token_program: Interface::try_from(quote_token_program)?,
             sysvar_instructions,
         })
     }
@@ -83,11 +82,14 @@ pub fn swap<'a>(
     hop_accounts: &mut HopAccounts,
     hop: usize,
     proxy_swap: bool,
-    owner_seeds: Option<&[&[&[u8]]]>
+    owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
     msg!("Dex::Tessera amount_in: {}, offset: {}", amount_in, offset);
 
-    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
+    require!(
+        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
+        ErrorCode::InvalidAccountsLength
+    );
 
     let mut swap_accounts = TesseraAccounts::parse_accounts(remaining_accounts, *offset)?;
 
@@ -104,7 +106,7 @@ pub fn swap<'a>(
         hop_accounts,
         hop,
         proxy_swap,
-        owner_seeds
+        owner_seeds,
     )?;
 
     let is_base_in = if swap_accounts.swap_source_token.mint == swap_accounts.base_mint.key() {
@@ -115,7 +117,11 @@ pub fn swap<'a>(
         return Err(ErrorCode::InvalidTokenMint.into());
     };
 
-    let expected_destination_mint = if is_base_in { swap_accounts.quote_mint.key() } else { swap_accounts.base_mint.key() };
+    let expected_destination_mint = if is_base_in {
+        swap_accounts.quote_mint.key()
+    } else {
+        swap_accounts.base_mint.key()
+    };
 
     if swap_accounts.swap_destination_token.mint != expected_destination_mint {
         return Err(ErrorCode::InvalidTokenMint.into());
@@ -123,9 +129,15 @@ pub fn swap<'a>(
 
     // Map source and destination to base and quote accounts correctly
     let (base_account, quote_account) = if is_base_in {
-        (swap_accounts.swap_source_token.clone(), swap_accounts.swap_destination_token.clone())
+        (
+            swap_accounts.swap_source_token.clone(),
+            swap_accounts.swap_destination_token.clone(),
+        )
     } else {
-        (swap_accounts.swap_destination_token.clone(), swap_accounts.swap_source_token.clone())
+        (
+            swap_accounts.swap_destination_token.clone(),
+            swap_accounts.swap_source_token.clone(),
+        )
     };
 
     let swap_params: SwapParams = SwapParams {
@@ -154,7 +166,7 @@ pub fn swap<'a>(
         AccountMeta::new_readonly(swap_accounts.quote_mint.key(), false),
         AccountMeta::new_readonly(swap_accounts.base_token_program.key(), false),
         AccountMeta::new_readonly(swap_accounts.quote_token_program.key(), false),
-        AccountMeta::new_readonly(swap_accounts.sysvar_instructions.key(), false)
+        AccountMeta::new_readonly(swap_accounts.sysvar_instructions.key(), false),
     ];
 
     let account_infos = vec![
@@ -169,7 +181,7 @@ pub fn swap<'a>(
         swap_accounts.quote_mint.to_account_info(),
         swap_accounts.base_token_program.to_account_info(),
         swap_accounts.quote_token_program.to_account_info(),
-        swap_accounts.sysvar_instructions.to_account_info()
+        swap_accounts.sysvar_instructions.to_account_info(),
     ];
 
     let instruction = Instruction {
@@ -180,9 +192,10 @@ pub fn swap<'a>(
 
     let dex_processor = &TesseraProcessor;
     let amount_out = invoke_process(
+        amount_in,
         dex_processor,
         &account_infos,
-        swap_accounts.swap_source_token.key(),
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,
@@ -190,7 +203,7 @@ pub fn swap<'a>(
         offset,
         ACCOUNTS_LEN,
         proxy_swap,
-        owner_seeds
+        owner_seeds,
     )?;
 
     Ok(amount_out)

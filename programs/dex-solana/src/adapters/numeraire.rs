@@ -1,8 +1,12 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{numeraire_program, HopAccounts, SWAP_EXACT_IN_SELECTOR, numeraire_usdstar_mint};
+use crate::{numeraire_program, numeraire_usdstar_mint, HopAccounts, SWAP_EXACT_IN_SELECTOR};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
-use anchor_spl::{token_interface::{Mint, TokenAccount}, token::Token, token_2022::Token2022};
+use anchor_spl::{
+    token::Token,
+    token_2022::Token2022,
+    token_interface::{Mint, TokenAccount},
+};
 use arrayref::array_ref;
 
 use super::common::DexProcessor;
@@ -19,14 +23,13 @@ pub struct NumeraireSwapAccounts<'info> {
     pub pool: &'info AccountInfo<'info>,
     pub in_mint: InterfaceAccount<'info, Mint>,
     pub out_mint: InterfaceAccount<'info, Mint>,
-    pub in_vault:  &'info AccountInfo<'info>,
-    pub out_vault:  &'info AccountInfo<'info>,
+    pub in_vault: &'info AccountInfo<'info>,
+    pub out_vault: &'info AccountInfo<'info>,
     pub numeraire_config: &'info AccountInfo<'info>,
     pub token_program: Program<'info, Token>,
     pub token_2022_program: Program<'info, Token2022>,
 }
 const ACCOUNTS_LEN: usize = 12;
-
 
 impl<'info> NumeraireSwapAccounts<'info> {
     fn parse_accounts(accounts: &'info [AccountInfo<'info>], offset: usize) -> Result<Self> {
@@ -61,7 +64,12 @@ impl<'info> NumeraireSwapAccounts<'info> {
     }
 }
 
-fn get_mint_index(mint_key: &Pubkey, pool_pair_0_mint: &Pubkey, pool_pair_1_mint: &Pubkey, pool_pair_2_mint: &Pubkey) -> Result<u8> {
+fn get_mint_index(
+    mint_key: &Pubkey,
+    pool_pair_0_mint: &Pubkey,
+    pool_pair_1_mint: &Pubkey,
+    pool_pair_2_mint: &Pubkey,
+) -> Result<u8> {
     if mint_key == &numeraire_usdstar_mint::id() {
         Ok(10u8)
     } else if mint_key == pool_pair_0_mint {
@@ -93,8 +101,7 @@ pub fn swap<'a>(
         remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
     );
-    let mut swap_accounts =
-        NumeraireSwapAccounts::parse_accounts(remaining_accounts, *offset)?;
+    let mut swap_accounts = NumeraireSwapAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &numeraire_program::id() {
         return Err(ErrorCode::InvalidProgramId.into());
     }
@@ -122,8 +129,18 @@ pub fn swap<'a>(
 
     let in_mint_key = swap_accounts.in_mint.key();
     let out_mint_key = swap_accounts.out_mint.key();
-    let in_index = get_mint_index(&in_mint_key, &pool_pair_0_mint, &pool_pair_1_mint, &pool_pair_2_mint)?;
-    let out_index = get_mint_index(&out_mint_key, &pool_pair_0_mint, &pool_pair_1_mint, &pool_pair_2_mint)?;
+    let in_index = get_mint_index(
+        &in_mint_key,
+        &pool_pair_0_mint,
+        &pool_pair_1_mint,
+        &pool_pair_2_mint,
+    )?;
+    let out_index = get_mint_index(
+        &out_mint_key,
+        &pool_pair_0_mint,
+        &pool_pair_1_mint,
+        &pool_pair_2_mint,
+    )?;
 
     let mut data = Vec::with_capacity(26);
     data.extend_from_slice(SWAP_EXACT_IN_SELECTOR);
@@ -179,9 +196,10 @@ pub fn swap<'a>(
     };
 
     let amount_out = invoke_process(
+        amount_in,
         &NumeraireProcessor,
         &account_infos,
-        swap_accounts.swap_source_token.key(),
+        &mut swap_accounts.swap_source_token,
         &mut swap_accounts.swap_destination_token,
         hop_accounts,
         instruction,

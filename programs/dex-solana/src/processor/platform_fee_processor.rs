@@ -67,6 +67,7 @@ pub trait PlatformFeeV3Processor<'info> {
         // TRIM
         _trim_rate: Option<u8>,
         _trim_account: Option<&AccountInfo<'info>>,
+        _acc_close_flag: bool,
     ) -> Result<u64> {
         Ok(_amount_out)
     }
