@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{meteora_dbc_program, HopAccounts, SWAP_SELECTOR, ZERO_ADDRESS};
+use crate::{meteora_dbc_program, HopAccounts, SWAP2_SELECTOR, ZERO_ADDRESS};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use arrayref::array_ref;
@@ -176,10 +176,11 @@ pub fn swap<'a>(
         owner_seeds,
     )?;
 
-    let mut data = Vec::with_capacity(24);
-    data.extend_from_slice(SWAP_SELECTOR);
-    data.extend_from_slice(&amount_in.to_le_bytes()); // amount_in
-    data.extend_from_slice(&1u64.to_le_bytes()); // min_amount_out
+    let mut data = Vec::with_capacity(25);
+    data.extend_from_slice(SWAP2_SELECTOR);
+    data.extend_from_slice(&amount_in.to_le_bytes()); // amount0(amount_in)
+    data.extend_from_slice(&1u64.to_le_bytes()); // amount1(minimum_amount_out)
+    data.extend_from_slice(&1u8.to_le_bytes()); // swap_mode(partial_fill)
 
     let accounts = vec![
         AccountMeta::new_readonly(swap_accounts.pool_authority.key(), false),
@@ -289,10 +290,11 @@ pub fn swap2<'a>(
         owner_seeds,
     )?;
 
-    let mut data = Vec::with_capacity(24);
-    data.extend_from_slice(SWAP_SELECTOR);
-    data.extend_from_slice(&amount_in.to_le_bytes()); // amount_in
-    data.extend_from_slice(&1u64.to_le_bytes()); // min_amount_out
+    let mut data = Vec::with_capacity(25);
+    data.extend_from_slice(SWAP2_SELECTOR);
+    data.extend_from_slice(&amount_in.to_le_bytes()); // amount0(amount_in)
+    data.extend_from_slice(&1u64.to_le_bytes()); // amount1(minimum_amount_out)
+    data.extend_from_slice(&1u8.to_le_bytes()); // swap_mode(partial_fill)
 
     let accounts = vec![
         AccountMeta::new_readonly(swap_accounts.pool_authority.key(), false),

@@ -199,6 +199,27 @@ pub enum ErrorCode {
 
     #[msg("Invalid diff lamports")]
     InvalidDiffLamports,
+
+    #[msg("Invalid token program")]
+    InvalidTokenProgram,
+
+    #[msg("Invalid signer")]
+    InvalidSigner,
+
+    #[msg("Invalid associated token program")]
+    InvalidAssociatedTokenProgram,
+  
+   #[msg("SOL receiver must be a system account")]
+    SolReceiverMustBeSystemAccount,
+
+    #[msg("Insufficient balance for transfer")]
+    InsufficientBalance,
+
+    #[msg("SOL receiver requires acc_close_flag to be true")]
+    SolReceiverRequiresAccCloseFlag,
+
+    #[msg("Destination must be wSOL when sol_receiver is specified")]
+    DestinationMustBeWsolForSolReceiver,
 }
 
 #[error_code]

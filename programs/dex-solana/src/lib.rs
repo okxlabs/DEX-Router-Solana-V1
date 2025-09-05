@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 pub mod adapters;
+pub mod allocator;
 pub mod constants;
 pub mod error;
 pub mod global_config;
@@ -223,11 +224,39 @@ pub mod dex_solana {
         )
     }
 
+    /// Swap ToB with optional specified receiver
+    /// - For normal token swaps: sol_receiver should be None
+    /// - For swap to SOL with custom receiver: sol_receiver should be Some and acc_close_flag must be true
+    pub fn swap_tob_v3_with_receiver<'a>(
+        ctx: Context<'_, '_, 'a, 'a, CommissionProxySwapAccountsV3WithReceiver<'a>>,
+        args: SwapArgs,
+        commission_info: u32,
+        trim_rate: u8,
+        platform_fee_rate: u16,
+        order_id: u64,
+    ) -> Result<()> {
+        instructions::swap_tob_specified_receiver_handler(
+            ctx,
+            args,
+            commission_info,
+            order_id,
+            Some(trim_rate),
+            Some(platform_fee_rate),
+        )
+    }
+
     pub fn wrap_unwrap_v3<'a>(
         ctx: Context<'_, '_, 'a, 'a, PlatformFeeWrapUnwrapAccounts<'a>>,
         args: PlatformFeeWrapUnwrapArgs,
     ) -> Result<()> {
         instructions::platform_fee_wrap_unwrap_handler_v3(ctx, args)
+    }
+
+    // ******************** Claim ******************** //
+    pub fn claim<'a>(
+        ctx: Context<'_, '_, 'a, 'a, ClaimAccounts<'a>>,
+    ) -> Result<()> {
+        instructions::claim_handler(ctx)
     }
 
     // ******************** Global Config ******************** //

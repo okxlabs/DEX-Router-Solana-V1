@@ -76,6 +76,14 @@ pub enum Dex {
     SolRfq,
     PumpfunBuy2,
     PumpfunammBuy2,
+    Humidifi,
+    HeavenBuy,
+    HeavenSell,
+    SolfiV2,
+    PumpfunBuy3,
+    PumpfunSell3,
+    PumpfunammBuy3,
+    PumpfunammSell3,
 }
 
 #[derive(Debug)]
@@ -711,6 +719,47 @@ fn distribute_swap<'a>(
             )
         },
         Dex::PumpfunammBuy2 => pumpfunamm::buy2,
+        Dex::Humidifi => humidifi::swap,
+        Dex::HeavenBuy => heaven::buy,
+        Dex::HeavenSell => heaven::sell,
+        Dex::SolfiV2 => solfi::swap_v2,
+        Dex::PumpfunBuy3 => {
+            return pumpfun::buy3(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                payer,
+            )
+        },
+        Dex::PumpfunSell3 => {
+            return pumpfun::sell3(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                payer,
+            )
+        },
+        Dex::PumpfunammBuy3 => pumpfunamm::buy3,
+        Dex::PumpfunammSell3 => {
+            return pumpfunamm::sell3(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                payer,
+            )
+        },
     };
     swap_function(
         remaining_accounts,

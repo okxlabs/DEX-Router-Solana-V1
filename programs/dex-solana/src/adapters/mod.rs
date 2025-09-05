@@ -37,3 +37,5 @@ pub mod virtuals;
 pub mod whirlpool;
 pub mod woofi;
 pub mod zerofi;
+pub mod humidifi;
+pub mod heaven;

@@ -24,6 +24,8 @@ pub const MAX_HOPS: usize = 3;
 pub const TOTAL_WEIGHT: u8 = 100;
 pub const SA_AUTHORITY_SEED: &[&[&[u8]]] = &[&[SEED_SA, &[BUMP_SA]]];
 pub const TOKEN_ACCOUNT_RENT: u64 = 2039280; // Token account rent (165 bytes)
+pub const MIN_SOL_ACCOUNT_RENT: u64 = 890880;
+pub const SOL_DIFF_LIMIT: u64 = 8_100_000;
 
 // Actual amount_in lower bound ratio for post swap check
 pub const ACTUAL_IN_LOWER_BOUND_NUM: u128 = 90; // 90%
@@ -37,6 +39,8 @@ pub const SWAP_EXACT_IN_SELECTOR: &[u8; 8] = &[104, 104, 131, 86, 161, 189, 180,
 pub const PLACE_TAKE_ORDER_SELECTOR: &[u8; 8] = &[3, 44, 71, 3, 26, 199, 203, 85];
 pub const BRIDGE_TO_LOG_SELECTOR: &[u8; 8] = &[212, 189, 176, 218, 196, 135, 64, 122];
 pub const ZERO_ADDRESS: Pubkey = Pubkey::new_from_array([0u8; 32]);
+pub const HEAVEN_BUY_SELECTOR: &[u8; 8] = &[102, 6, 61, 18, 1, 218, 235, 234];
+pub const HEAVEN_SELL_SELECTOR: &[u8; 8] = &[51, 230, 133, 164, 1, 127, 131, 173];
 
 pub const PUMPFUN_BUY_SELECTOR: &[u8; 8] = &[102, 6, 61, 18, 1, 218, 235, 234];
 pub const PUMPFUN_SELL_SELECTOR: &[u8; 8] = &[51, 230, 133, 164, 1, 127, 131, 173];
@@ -48,8 +52,7 @@ pub const WOOFI_SWAP_SELECTOR: &[u8; 8] = &[248, 198, 158, 145, 225, 117, 135, 2
 pub const VIRTUALS_BUY_SELECTOR: &[u8; 8] = &[102, 6, 61, 18, 1, 218, 235, 234];
 pub const VIRTUALS_SELL_SELECTOR: &[u8; 8] = &[51, 230, 133, 164, 1, 127, 131, 173];
 pub const PERPETUALS_ADDLIQ_SELECTOR: &[u8; 8] = &[0xe4, 0xa2, 0x4e, 0x1c, 0x46, 0xdb, 0x74, 0x73];
-pub const PERPETUALS_REMOVELIQ_SELECTOR: &[u8; 8] =
-    &[0xe6, 0xd7, 0x52, 0x7f, 0xf1, 0x65, 0xe3, 0x92];
+pub const PERPETUALS_REMOVELIQ_SELECTOR: &[u8; 8] = &[0xe6, 0xd7, 0x52, 0x7f, 0xf1, 0x65, 0xe3, 0x92];
 pub const PERPETUALS_SWAP_SELECTOR: &[u8; 8] = &[0x41, 0x4b, 0x3f, 0x4c, 0xeb, 0x5b, 0x5b, 0x88];
 pub const RAYDIUM_LAUNCHPAD_BUY_SELECTOR: &[u8; 8] = &[250, 234, 13, 123, 213, 156, 19, 236];
 pub const RAYDIUM_LAUNCHPAD_SELL_SELECTOR: &[u8; 8] = &[149, 39, 222, 155, 211, 124, 152, 26];
@@ -58,16 +61,25 @@ pub const VERTIGO_SELL_SELECTOR: &[u8; 8] = &[51, 230, 133, 164, 1, 127, 131, 17
 pub const BOOPFUN_BUY_SELECTOR: &[u8; 8] = &[138, 127, 14, 91, 38, 87, 115, 105];
 pub const BOOPFUN_SELL_SELECTOR: &[u8; 8] = &[109, 61, 40, 187, 230, 176, 135, 174];
 pub const GAMMA_ORACLE_SWAP_SELECTOR: &[u8; 8] = &[239, 82, 192, 187, 160, 26, 223, 223];
-pub const SABER_DECIMAL_DEPOSIT_SELECTOR: &[u8; 8] =
-    &[0xf2, 0x23, 0xc6, 0x89, 0x52, 0xe1, 0xf2, 0xb6];
-pub const SABER_DECIMAL_WITHDRAW_SELECTOR: &[u8; 8] =
-    &[0xb7, 0x12, 0x46, 0x9c, 0x94, 0x6d, 0xa1, 0x22];
+pub const SABER_DECIMAL_DEPOSIT_SELECTOR: &[u8; 8] = &[0xf2, 0x23, 0xc6, 0x89, 0x52, 0xe1, 0xf2, 0xb6];
+pub const SABER_DECIMAL_WITHDRAW_SELECTOR: &[u8; 8] = &[0xb7, 0x12, 0x46, 0x9c, 0x94, 0x6d, 0xa1, 0x22];
 pub const ONE_DEX_SWAP_SELECTOR: &[u8; 8] = &[8, 151, 245, 76, 172, 203, 144, 39];
 pub const MANIFEST_SWAP_SELECTOR: &[u8; 1] = &[4];
 pub const TESSERA_SWAP_SELECTOR: &[u8; 1] = &[16];
 pub const SOL_RFQ_FILL_ORDER_SELECTOR: &[u8; 8] = &[232, 122, 115, 25, 199, 143, 136, 162];
-pub const MIN_SOL_ACCOUNT_RENT: u64 = 890880;
-pub const SOL_DIFF_LIMIT: u64 = 2_100_000;
+
+pub const HUMIDIFI_SWAP_SELECTOR: u8 = 0x4;
+const HUMIDIFI_IX_DATA_KEY_SEED: [u8; 32] = [58, 255, 47, 255, 226, 186, 235, 195, 123, 131, 245, 8, 11, 233, 132, 219, 225, 40, 79, 119, 169, 121, 169, 58, 197, 1, 122, 9, 216, 164, 149, 97];
+pub const HUMIDIFI_IX_DATA_KEY: u64 = u64::from_le_bytes([
+    HUMIDIFI_IX_DATA_KEY_SEED[0],
+    HUMIDIFI_IX_DATA_KEY_SEED[1],
+    HUMIDIFI_IX_DATA_KEY_SEED[2],
+    HUMIDIFI_IX_DATA_KEY_SEED[3],
+    HUMIDIFI_IX_DATA_KEY_SEED[4],
+    HUMIDIFI_IX_DATA_KEY_SEED[5],
+    HUMIDIFI_IX_DATA_KEY_SEED[6],
+    HUMIDIFI_IX_DATA_KEY_SEED[7],
+]);
 
 // ******************** Limit Order ******************** //
 pub const GLOBAL_CONFIG_SEED: &str = "global_config";
@@ -95,6 +107,11 @@ pub mod wsol_sa {
     use anchor_lang::declare_id;
     declare_id!("2rikd7tzPbmowhUJzPNVtX7fuUGcnBa8jqJnx6HbtHeE");
     // declare_id!("5RWt14cufVyp4URS5hfoCczqSATxFH4AW6XAN8yyJtTg"); //pre_deploy
+}
+
+pub mod claim_authority {
+    use anchor_lang::declare_id;
+    declare_id!("CjoV5B96reuCfPh2rRK11G1QptG97jZdyZArTn3EN1Mj");
 }
 
 pub mod compute_budget_program {
@@ -281,6 +298,11 @@ pub mod solfi_program {
     declare_id!("SoLFiHG9TfgtdUXUjWAxi3LtvYuFyDLVhBWxdMZxyCe");
 }
 
+pub mod solfi_v2_program {
+    use anchor_lang::declare_id;
+    declare_id!("SV2EYYJyRz2YhfXwXnhNAevDEui5Q6yrfyo13WtupPF");
+}
+
 pub mod qualia_program {
     use anchor_lang::declare_id;
     declare_id!("RBCNJvXMmrcSbX6Tc9dYySLR13Vs6kjVUVXK6qJ4Lf4");
@@ -406,4 +428,14 @@ pub mod tessera_program {
 pub mod sol_rfq_program {
     use anchor_lang::declare_id;
     declare_id!("preNqJotnzt2tUaeGX4FsQEU3dUsopsraZHVwNUwUAZ");
+}
+
+pub mod humidifi_program {
+    use anchor_lang::declare_id;
+    declare_id!("9H6tua7jkLhdm3w8BvgpTn5LZNU7g4ZynDmCiNN3q6Rp");
+}
+
+pub mod heaven_program {
+    use anchor_lang::declare_id;
+    declare_id!("HEAVENoP2qxoeuF8Dj2oT1GHEnu49U5mJYkdeC8BAX2o");
 }

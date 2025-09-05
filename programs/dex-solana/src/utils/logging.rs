@@ -101,3 +101,29 @@ pub fn log_rate_info_v3(
         acc_close_flag
     );
 }
+
+
+pub fn log_claim_info_before(
+    source_balance: u64,
+    destination_balance: u64,
+    amount: u64,
+) {
+    msg!("before_source_balance: {:?}, before_destination_balance: {:?}, amount: {:?}", source_balance, destination_balance, amount);
+}
+
+pub fn log_claim_info_after(
+    source_balance: u64,
+    destination_balance: u64,
+    source_token_change: u64,   
+    destination_token_change: u64,
+) {
+    msg!("after_source_balance: {:?}, after_destination_balance: {:?}, source_token_change: {:?}, destination_token_change: {:?}", source_balance, destination_balance, source_token_change, destination_token_change);
+}
+
+pub fn log_sa_lamports_info(
+    before_sa_lamports: u64,
+    after_sa_lamports: u64,
+    diff_sa_lamports: u64,
+) {
+    msg!("before_sa_lamports: {:?}, after_sa_lamports: {:?}, diff_sa_lamports: {:?}", before_sa_lamports, after_sa_lamports, diff_sa_lamports);
+}

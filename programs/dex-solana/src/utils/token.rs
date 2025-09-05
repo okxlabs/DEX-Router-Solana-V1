@@ -12,6 +12,7 @@ use anchor_spl::token_2022::spl_token_2022::{
 use anchor_spl::token_2022::{self, Token2022};
 use anchor_spl::token_2022_extensions;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use crate::constants::MIN_SOL_ACCOUNT_RENT;
 
 pub fn transfer_token<'a>(
     authority: AccountInfo<'a>,
@@ -74,6 +75,67 @@ pub fn transfer_sol<'a>(
         invoke(&ix, &[from, to])?;
     }
     Ok(())
+}
+
+/// Transfer SOL ensuring the recipient has rent-exempt balance
+/// If the final balance would be below rent exemption, transfers enough to reach it
+/// Returns the actual amount transferred
+pub fn transfer_sol_with_rent_exemption<'a>(
+    from: &AccountInfo<'a>,
+    to: &AccountInfo<'a>,
+    requested_amount: u64,
+    from_seeds: Option<&[&[&[u8]]]>,
+) -> Result<u64> {
+    
+    // Skip if transferring to self or amount is 0
+    if from.key() == to.key() || requested_amount == 0 {
+        return Ok(0);
+    }
+    
+    // Calculate actual transfer amount to ensure receiver rent exemption
+    let receiver_current_balance = to.lamports();
+    let receiver_final_balance = receiver_current_balance
+        .checked_add(requested_amount)
+        .ok_or(ErrorCode::CalculationError)?;
+    
+    // Determine actual transfer amount
+    let actual_transfer_amount = if receiver_final_balance < MIN_SOL_ACCOUNT_RENT {
+        // Need to top up to minimum rent
+        MIN_SOL_ACCOUNT_RENT
+            .checked_sub(receiver_current_balance)
+            .ok_or(ErrorCode::CalculationError)?
+    } else {
+        // Receiver will have enough, use original amount
+        requested_amount
+    };
+    
+    // Check if sender has enough balance
+    let sender_balance = from.lamports();
+    if sender_balance < actual_transfer_amount {
+        msg!(
+            "Insufficient sender balance: {} < {}",
+            sender_balance,
+            actual_transfer_amount
+        );
+        return Err(ErrorCode::InsufficientBalance.into());
+    }
+    
+    // Perform transfer using existing transfer_sol function
+    transfer_sol(
+        from.to_account_info(),
+        to.to_account_info(),
+        actual_transfer_amount,
+        from_seeds,
+    )?;
+    
+    msg!(
+        "SOL transferred with rent exemption: {} lamports (requested: {}) to {}",
+        actual_transfer_amount,
+        requested_amount,
+        to.key()
+    );
+    
+    Ok(actual_transfer_amount)
 }
 
 pub fn sync_wsol_account<'a>(
