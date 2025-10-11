@@ -1,9 +1,9 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
 use crate::{
+    DEPOSIT_SELECTOR, HopAccounts, SWAP_SELECTOR, SWAP2_SELECTOR, WITHDRAW_SELECTOR, ZERO_ADDRESS,
     meteora_damm_v2_program, meteora_dlmm_program, meteora_dynamicpool_program,
-    meteora_vault_program, HopAccounts, DEPOSIT_SELECTOR, SWAP2_SELECTOR, SWAP_SELECTOR,
-    WITHDRAW_SELECTOR, ZERO_ADDRESS,
+    meteora_vault_program,
 };
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token::Token;
@@ -144,6 +144,27 @@ pub struct MeteoraDAMMV2SwapAccounts<'info> {
 
 const DAMMV2_ACCOUNTS_LEN: usize = 16;
 
+pub struct MeteoraDAMMV2Swap2Accounts<'info> {
+    pub dex_program_id: &'info AccountInfo<'info>,
+    pub swap_authority: &'info AccountInfo<'info>,
+    pub swap_source_account: InterfaceAccount<'info, TokenAccount>,
+    pub swap_destination_account: InterfaceAccount<'info, TokenAccount>,
+
+    pub pool_authority: &'info AccountInfo<'info>,
+    pub pool: &'info AccountInfo<'info>,
+    pub token_a_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub token_b_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub token_a_mint: InterfaceAccount<'info, Mint>,
+    pub token_b_mint: InterfaceAccount<'info, Mint>,
+    pub token_a_program: Interface<'info, TokenInterface>,
+    pub token_b_program: Interface<'info, TokenInterface>,
+    pub referral_token_account: &'info AccountInfo<'info>,
+    pub event_authority: &'info AccountInfo<'info>,
+    pub instruction_sysvar: &'info AccountInfo<'info>,
+}
+
+const DAMMV2_SWAP2_ACCOUNTS_LEN: usize = 15;
+
 impl<'info> MeteoraDynamicPoolAccounts<'info> {
     fn parse_accounts(accounts: &'info [AccountInfo<'info>], offset: usize) -> Result<Self> {
         let [
@@ -163,7 +184,7 @@ impl<'info> MeteoraDynamicPoolAccounts<'info> {
             admin_token_fee,
             vault_program,
             token_program,
-      ]: & [AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -205,7 +226,7 @@ impl<'info> MeteoraLSTPoolAccounts<'info> {
             vault_program,
             token_program,
             lst,
-      ]: & [AccountInfo<'info>; LST_ACCOUNTS_LEN] = array_ref![accounts, offset, LST_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; LST_ACCOUNTS_LEN] = array_ref![accounts, offset, LST_ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -249,7 +270,8 @@ impl<'info> MeteoraDlmmAccounts<'info> {
             bin_array0,
             bin_array1,
             bin_array2,
-        ]: & [AccountInfo<'info>; DLMM_ACCOUNTS_LEN] = array_ref![accounts, offset, DLMM_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; DLMM_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, DLMM_ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -295,7 +317,8 @@ impl<'info> MeteoraDlmmSwap2Accounts<'info> {
             bin_array0,
             bin_array1,
             bin_array2,
-        ]: & [AccountInfo<'info>; DLMM_SWAP2_ACCOUNTS_LEN] = array_ref![accounts, offset, DLMM_SWAP2_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; DLMM_SWAP2_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, DLMM_SWAP2_ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -331,7 +354,8 @@ impl<'info> MeteoraDynamicVaultAccounts<'info> {
             token_vault,
             lp_mint,
             token_program,
-      ]: & [AccountInfo<'info>; VAULT_ACCOUNTS_LEN] = array_ref![accounts, offset, VAULT_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; VAULT_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, VAULT_ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -352,7 +376,7 @@ impl<'info> MeteoraDAMMV2SwapAccounts<'info> {
             swap_authority_pubkey,
             swap_source_token,
             swap_destination_token,
-            pool_authority, 
+            pool_authority,
             pool,
             input_token_account,
             output_token_account,
@@ -363,8 +387,9 @@ impl<'info> MeteoraDAMMV2SwapAccounts<'info> {
             token_a_program,
             token_b_program,
             referral_token_account,
-            event_authority
-        ]: & [AccountInfo<'info>; DAMMV2_ACCOUNTS_LEN] = array_ref![accounts, offset, DAMMV2_ACCOUNTS_LEN];
+            event_authority,
+        ]: &[AccountInfo<'info>; DAMMV2_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, DAMMV2_ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -386,6 +411,46 @@ impl<'info> MeteoraDAMMV2SwapAccounts<'info> {
     }
 }
 
+impl<'info> MeteoraDAMMV2Swap2Accounts<'info> {
+    fn parse_accounts(accounts: &'info [AccountInfo<'info>], offset: usize) -> Result<Self> {
+        let [
+            dex_program_id,
+            swap_authority,
+            swap_source_account,
+            swap_destination_account,
+            pool_authority,
+            pool,
+            token_a_vault,
+            token_b_vault,
+            token_a_mint,
+            token_b_mint,
+            token_a_program,
+            token_b_program,
+            referral_token_account,
+            event_authority,
+            instruction_sysvar,
+        ]: &[AccountInfo<'info>; DAMMV2_SWAP2_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, DAMMV2_SWAP2_ACCOUNTS_LEN];
+        Ok(Self {
+            dex_program_id,
+            swap_authority,
+            swap_source_account: InterfaceAccount::try_from(swap_source_account)?,
+            swap_destination_account: InterfaceAccount::try_from(swap_destination_account)?,
+            pool_authority,
+            pool,
+            token_a_vault: Box::new(InterfaceAccount::try_from(token_a_vault)?),
+            token_b_vault: Box::new(InterfaceAccount::try_from(token_b_vault)?),
+            token_a_mint: InterfaceAccount::try_from(token_a_mint)?,
+            token_b_mint: InterfaceAccount::try_from(token_b_mint)?,
+            token_a_program: Interface::try_from(token_a_program)?,
+            token_b_program: Interface::try_from(token_b_program)?,
+            referral_token_account,
+            event_authority,
+            instruction_sysvar,
+        })
+    }
+}
+
 pub fn deposit<'a>(
     remaining_accounts: &'a [AccountInfo<'a>],
     amount_in: u64,
@@ -395,11 +460,7 @@ pub fn deposit<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::MeteoraVaultDeposit amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::MeteoraVaultDeposit amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + VAULT_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -450,11 +511,8 @@ pub fn deposit<'a>(
         swap_accounts.token_program.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &MeteoraDynamicPoolProcessor;
     let amount_out = invoke_process(
@@ -483,11 +541,7 @@ pub fn withdraw<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::MeteoraVaultWithdraw amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::MeteoraVaultWithdraw amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + VAULT_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -538,11 +592,8 @@ pub fn withdraw<'a>(
         swap_accounts.token_program.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &MeteoraDynamicPoolProcessor;
     let amount_out = invoke_process(
@@ -571,15 +622,8 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::MeteoraSwap amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    msg!("Dex::MeteoraSwap amount_in: {}, offset: {}", amount_in, offset);
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
     let mut swap_accounts =
         MeteoraDynamicPoolAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &meteora_dynamicpool_program::id() {
@@ -642,11 +686,8 @@ pub fn swap<'a>(
         swap_accounts.token_program.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &MeteoraDynamicPoolProcessor;
     let amount_out = invoke_process(
@@ -675,11 +716,7 @@ pub fn swap_lst<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::MeteoraSwapLst amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::MeteoraSwapLst amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + LST_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -747,11 +784,8 @@ pub fn swap_lst<'a>(
         swap_accounts.lst.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &MeteoraDynamicPoolProcessor;
     let amount_out = invoke_process(
@@ -780,11 +814,7 @@ pub fn dlmm_swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::MeteoraDlmm amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::MeteoraDlmm amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + DLMM_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -863,11 +893,8 @@ pub fn dlmm_swap<'a>(
         account_infos.push(swap_accounts.bin_array2.to_account_info());
     }
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &MeteoraDynamicPoolProcessor;
     let amount_out = invoke_process(
@@ -896,11 +923,7 @@ pub fn dlmm_swap2<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::MeteoraDlmmSwap2 amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::MeteoraDlmmSwap2 amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + DLMM_SWAP2_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -982,11 +1005,8 @@ pub fn dlmm_swap2<'a>(
         account_infos.push(swap_accounts.bin_array2.to_account_info());
     }
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &MeteoraDynamicPoolProcessor;
     let amount_out = invoke_process(
@@ -1006,7 +1026,7 @@ pub fn dlmm_swap2<'a>(
     Ok(amount_out)
 }
 
-pub fn swap_v2_damm<'a>(
+pub fn damm_v2_swap<'a>(
     remaining_accounts: &'a [AccountInfo<'a>],
     amount_in: u64,
     offset: &mut usize,
@@ -1015,11 +1035,7 @@ pub fn swap_v2_damm<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::MeteoraDAMMV2 amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::MeteoraDAMMV2 amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + DAMMV2_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -1086,11 +1102,8 @@ pub fn swap_v2_damm<'a>(
         swap_accounts.dex_program_id.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &MeteoraDynamicPoolProcessor;
     let amount_out = invoke_process(
@@ -1104,6 +1117,108 @@ pub fn swap_v2_damm<'a>(
         hop,
         offset,
         DAMMV2_ACCOUNTS_LEN,
+        proxy_swap,
+        owner_seeds,
+    )?;
+
+    Ok(amount_out)
+}
+
+pub fn damm_v2_swap2<'a>(
+    remaining_accounts: &'a [AccountInfo<'a>],
+    amount_in: u64,
+    offset: &mut usize,
+    hop_accounts: &mut HopAccounts,
+    hop: usize,
+    proxy_swap: bool,
+    owner_seeds: Option<&[&[&[u8]]]>,
+) -> Result<u64> {
+    msg!("Dex::MeteoraDAMMV2Swap2 amount_in: {}, offset: {}", amount_in, offset);
+    require!(
+        remaining_accounts.len() >= *offset + DAMMV2_SWAP2_ACCOUNTS_LEN,
+        ErrorCode::InvalidAccountsLength
+    );
+
+    let mut swap_accounts =
+        MeteoraDAMMV2Swap2Accounts::parse_accounts(remaining_accounts, *offset)?;
+    if swap_accounts.dex_program_id.key != &meteora_damm_v2_program::id() {
+        return Err(ErrorCode::InvalidProgramId.into());
+    }
+    swap_accounts.pool.key().log();
+
+    let swap_destination_token = swap_accounts.swap_destination_account.key();
+
+    before_check(
+        &swap_accounts.swap_authority,
+        &swap_accounts.swap_source_account,
+        swap_destination_token,
+        hop_accounts,
+        hop,
+        proxy_swap,
+        owner_seeds,
+    )?;
+
+    let mut data = Vec::with_capacity(ARGS_LEN);
+    data.extend_from_slice(SWAP2_SELECTOR);
+    data.extend_from_slice(&amount_in.to_le_bytes()); // amount_0: When it's exact in, this will be amount_in.
+    data.extend_from_slice(&1u64.to_le_bytes()); // amount_1: When it's exact in, this will be minimum_amount_out.
+    data.extend_from_slice(&0u8.to_le_bytes()); // swap_mode: 0 - ExactIn, 1 - PartialFill, 2 - ExactOut,
+
+    let mut accounts = Vec::with_capacity(DAMMV2_SWAP2_ACCOUNTS_LEN);
+    accounts.push(AccountMeta::new_readonly(swap_accounts.pool_authority.key(), false));
+    accounts.push(AccountMeta::new(swap_accounts.pool.key(), false));
+    accounts.push(AccountMeta::new(swap_accounts.swap_source_account.key(), false));
+    accounts.push(AccountMeta::new(swap_accounts.swap_destination_account.key(), false));
+    accounts.push(AccountMeta::new(swap_accounts.token_a_vault.key(), false));
+    accounts.push(AccountMeta::new(swap_accounts.token_b_vault.key(), false));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.token_a_mint.key(), false));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.token_b_mint.key(), false));
+    accounts.push(AccountMeta::new(swap_accounts.swap_authority.key(), true));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.token_a_program.key(), false));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.token_b_program.key(), false));
+    accounts.push(
+        if swap_accounts.referral_token_account.key() != swap_accounts.dex_program_id.key() {
+            AccountMeta::new(swap_accounts.referral_token_account.key(), false)
+        } else {
+            AccountMeta::new_readonly(swap_accounts.referral_token_account.key(), false)
+        },
+    );
+    accounts.push(AccountMeta::new_readonly(swap_accounts.event_authority.key(), false));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.dex_program_id.key(), false));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.instruction_sysvar.key(), false));
+
+    let mut account_infos = Vec::with_capacity(DAMMV2_SWAP2_ACCOUNTS_LEN);
+    account_infos.push(swap_accounts.pool_authority.to_account_info());
+    account_infos.push(swap_accounts.pool.to_account_info());
+    account_infos.push(swap_accounts.swap_source_account.to_account_info());
+    account_infos.push(swap_accounts.swap_destination_account.to_account_info());
+    account_infos.push(swap_accounts.token_a_vault.to_account_info());
+    account_infos.push(swap_accounts.token_b_vault.to_account_info());
+    account_infos.push(swap_accounts.token_a_mint.to_account_info());
+    account_infos.push(swap_accounts.token_b_mint.to_account_info());
+    account_infos.push(swap_accounts.swap_authority.to_account_info());
+    account_infos.push(swap_accounts.token_a_program.to_account_info());
+    account_infos.push(swap_accounts.token_b_program.to_account_info());
+    account_infos.push(swap_accounts.referral_token_account.to_account_info());
+    account_infos.push(swap_accounts.event_authority.to_account_info());
+    account_infos.push(swap_accounts.dex_program_id.to_account_info());
+    account_infos.push(swap_accounts.instruction_sysvar.to_account_info());
+
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
+
+    let dex_processor = &MeteoraDynamicPoolProcessor;
+    let amount_out = invoke_process(
+        amount_in,
+        dex_processor,
+        &account_infos,
+        &mut swap_accounts.swap_source_account,
+        &mut swap_accounts.swap_destination_account,
+        hop_accounts,
+        instruction,
+        hop,
+        offset,
+        DAMMV2_SWAP2_ACCOUNTS_LEN,
         proxy_swap,
         owner_seeds,
     )?;

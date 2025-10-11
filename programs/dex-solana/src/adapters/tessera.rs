@@ -5,7 +5,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{tessera_program, HopAccounts, TESSERA_SWAP_SELECTOR};
+use crate::{HopAccounts, TESSERA_SWAP_SELECTOR, tessera_program};
 
 use super::common::DexProcessor;
 
@@ -86,10 +86,7 @@ pub fn swap<'a>(
 ) -> Result<u64> {
     msg!("Dex::Tessera amount_in: {}, offset: {}", amount_in, offset);
 
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
 
     let mut swap_accounts = TesseraAccounts::parse_accounts(remaining_accounts, *offset)?;
 
@@ -117,11 +114,8 @@ pub fn swap<'a>(
         return Err(ErrorCode::InvalidTokenMint.into());
     };
 
-    let expected_destination_mint = if is_base_in {
-        swap_accounts.quote_mint.key()
-    } else {
-        swap_accounts.base_mint.key()
-    };
+    let expected_destination_mint =
+        if is_base_in { swap_accounts.quote_mint.key() } else { swap_accounts.base_mint.key() };
 
     if swap_accounts.swap_destination_token.mint != expected_destination_mint {
         return Err(ErrorCode::InvalidTokenMint.into());
@@ -129,15 +123,9 @@ pub fn swap<'a>(
 
     // Map source and destination to base and quote accounts correctly
     let (base_account, quote_account) = if is_base_in {
-        (
-            swap_accounts.swap_source_token.clone(),
-            swap_accounts.swap_destination_token.clone(),
-        )
+        (swap_accounts.swap_source_token.clone(), swap_accounts.swap_destination_token.clone())
     } else {
-        (
-            swap_accounts.swap_destination_token.clone(),
-            swap_accounts.swap_source_token.clone(),
-        )
+        (swap_accounts.swap_destination_token.clone(), swap_accounts.swap_source_token.clone())
     };
 
     let swap_params: SwapParams = SwapParams {
@@ -184,11 +172,8 @@ pub fn swap<'a>(
         swap_accounts.sysvar_instructions.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &TesseraProcessor;
     let amount_out = invoke_process(

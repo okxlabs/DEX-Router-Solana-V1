@@ -2,7 +2,7 @@ use crate::constants::*;
 use crate::error::LimitOrderError;
 use crate::state::{config::*, event::*, order::*};
 use crate::utils::*;
-use crate::{common_swap, SwapArgs};
+use crate::{SwapArgs, common_swap};
 use anchor_lang::{prelude::*, solana_program::clock::Clock, solana_program::sysvar};
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
@@ -191,9 +191,8 @@ pub fn commission_fill_order_handler<'a>(
                 Some(order_pda_seeds),
             )?;
 
-            real_amount_in = real_amount_in
-                .checked_sub(fee_amount)
-                .ok_or(LimitOrderError::MathOverflow)?;
+            real_amount_in =
+                real_amount_in.checked_sub(fee_amount).ok_or(LimitOrderError::MathOverflow)?;
 
             // Transfer token to temp_input_token_account
             transfer_token(
@@ -221,10 +220,7 @@ pub fn commission_fill_order_handler<'a>(
         );
     } else {
         // Owner is maker, support other toToken
-        require!(
-            output_token_account.owner == maker,
-            LimitOrderError::InvalidOutputTokenOwner
-        );
+        require!(output_token_account.owner == maker, LimitOrderError::InvalidOutputTokenOwner);
     }
 
     // Reset swap args
@@ -275,11 +271,7 @@ pub fn commission_fill_order_handler<'a>(
     }
 
     // Harvest the transfer fee if it exists
-    if get_transfer_fee(
-        &ctx.accounts.input_token_mint.to_account_info(),
-        real_amount_in,
-    )? > 0
-    {
+    if get_transfer_fee(&ctx.accounts.input_token_mint.to_account_info(), real_amount_in)? > 0 {
         harvest_withheld_tokens_to_mint(
             ctx.accounts.input_token_program.to_account_info(),
             ctx.accounts.input_token_mint.to_account_info(),
@@ -341,12 +333,7 @@ fn handle_sol_output<'info>(
             .checked_div(COMMISSION_DENOMINATOR_V2)
             .ok_or(LimitOrderError::MathOverflow)?;
 
-        msg!(
-            "fee_direction: {:?}, fee_rate: {:?}, fee_amount: {:?}",
-            false,
-            fee_rate,
-            fee_amount
-        );
+        msg!("fee_direction: {:?}, fee_rate: {:?}, fee_amount: {:?}", false, fee_rate, fee_amount);
 
         // Transfer token to fee token account
         transfer_token(
@@ -360,9 +347,8 @@ fn handle_sol_output<'info>(
             None,
         )?;
 
-        real_amount_out = real_amount_out
-            .checked_sub(fee_amount)
-            .ok_or(LimitOrderError::MathOverflow)?;
+        real_amount_out =
+            real_amount_out.checked_sub(fee_amount).ok_or(LimitOrderError::MathOverflow)?;
     }
 
     // Close the temp wsol account
@@ -374,12 +360,7 @@ fn handle_sol_output<'info>(
         None,
     )?;
     // Transfer sol to maker
-    transfer_sol(
-        payer.to_account_info(),
-        maker.to_account_info(),
-        real_amount_out,
-        None,
-    )?;
+    transfer_sol(payer.to_account_info(), maker.to_account_info(), real_amount_out, None)?;
     msg!("Transfer sol to maker: {}", real_amount_out);
     Ok(())
 }

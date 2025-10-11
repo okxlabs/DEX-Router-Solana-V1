@@ -1,7 +1,7 @@
 use crate::constants::*;
 use crate::processor::proxy_swap_processor::ProxySwapProcessor;
 use crate::{
-    common_commission_sol_swap, common_commission_token_swap, CommissionProcessor, SwapArgs,
+    CommissionProcessor, SwapArgs, common_commission_sol_swap, common_commission_token_swap,
 };
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
@@ -147,17 +147,9 @@ pub fn commission_spl_proxy_swap_handler<'a>(
     order_id: u64,
 ) -> Result<()> {
     let commission_token_program = if commission_direction {
-        ctx.accounts
-            .source_token_program
-            .as_ref()
-            .unwrap()
-            .to_account_info()
+        ctx.accounts.source_token_program.as_ref().unwrap().to_account_info()
     } else {
-        ctx.accounts
-            .destination_token_program
-            .as_ref()
-            .unwrap()
-            .to_account_info()
+        ctx.accounts.destination_token_program.as_ref().unwrap().to_account_info()
     };
     let swap_processor = &ProxySwapProcessor;
     let commission_processor = &CommissionProcessor;

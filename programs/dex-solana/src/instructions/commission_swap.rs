@@ -3,8 +3,8 @@ use crate::error::ErrorCode;
 use crate::processor::swap_processor::SwapProcessor;
 use crate::utils::token::{close_token_account, transfer_sol, transfer_token};
 use crate::{
-    common_commission_sol_swap, CommissionSwapArgs, CommonCommissionProcessor, SwapArgs,
-    COMMISSION_DENOMINATOR, COMMISSION_RATE_LIMIT,
+    COMMISSION_DENOMINATOR, COMMISSION_RATE_LIMIT, CommissionSwapArgs, CommonCommissionProcessor,
+    SwapArgs, common_commission_sol_swap,
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
@@ -60,10 +60,7 @@ impl<'info> CommonCommissionProcessor<'info> for CommissionProcessor {
                     destination_token_account.to_account_info(),
                     payer.to_account_info(),
                     payer.to_account_info(),
-                    destination_token_program
-                        .as_ref()
-                        .unwrap()
-                        .to_account_info(),
+                    destination_token_program.as_ref().unwrap().to_account_info(),
                     None,
                 )?;
             }

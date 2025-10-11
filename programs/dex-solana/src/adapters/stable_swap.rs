@@ -1,7 +1,7 @@
+use crate::HopAccounts;
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
 use crate::saber_stable_program;
-use crate::HopAccounts;
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::TokenAccount;
@@ -42,7 +42,7 @@ impl<'info> StableSwapAccounts<'info> {
             token_b_account,
             swap_admin_fee,
             token_program,
-      ]: & [AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -67,15 +67,8 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::StableSwap amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    msg!("Dex::StableSwap amount_in: {}, offset: {}", amount_in, offset);
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
     let mut swap_accounts = StableSwapAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &saber_stable_program::id() {
         return Err(ErrorCode::InvalidProgramId.into());
@@ -141,11 +134,8 @@ pub fn swap<'a>(
         swap_accounts.token_program.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &StableSwapProcessor;
     let amount_out = invoke_process(

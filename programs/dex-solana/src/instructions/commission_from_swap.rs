@@ -1,8 +1,8 @@
 use crate::instructions::from_swap::cpi_bridge_to_log;
 use crate::processor::swap_processor::SwapProcessor;
 use crate::{
-    common_commission_sol_swap, common_commission_token_swap, BridgeToArgs, CommissionProcessor,
-    SwapArgs,
+    BridgeToArgs, CommissionProcessor, SwapArgs, common_commission_sol_swap,
+    common_commission_token_swap,
 };
 use anchor_lang::prelude::*;
 use anchor_spl::{

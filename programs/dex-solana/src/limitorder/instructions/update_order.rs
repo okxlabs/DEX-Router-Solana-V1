@@ -75,11 +75,7 @@ pub fn update_order_handler<'a>(
 
     // Update deadline: should >= 5 minutes
     if deadline > 0 {
-        require_gte!(
-            deadline,
-            update_ts + MIN_DEADLINE,
-            LimitOrderError::InvalidDeadline
-        );
+        require_gte!(deadline, update_ts + MIN_DEADLINE, LimitOrderError::InvalidDeadline);
         order.deadline = deadline;
     }
 

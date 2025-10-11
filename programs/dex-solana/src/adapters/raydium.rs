@@ -1,6 +1,9 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{raydium_clmm_program, raydium_stable_program, raydium_swap_program, raydium_cpmm_program, HopAccounts, SWAP_SELECTOR, SWAP_V2_SELECTOR, CPSWAP_SELECTOR, ZERO_ADDRESS};
+use crate::{
+    CPSWAP_SELECTOR, HopAccounts, SWAP_SELECTOR, SWAP_V2_SELECTOR, ZERO_ADDRESS,
+    raydium_clmm_program, raydium_cpmm_program, raydium_stable_program, raydium_swap_program,
+};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, Token2022, TokenAccount, TokenInterface};
@@ -14,7 +17,6 @@ const ARGS_CPMM_LEN: usize = 24;
 
 pub struct RaydiumSwapProcessor;
 impl DexProcessor for RaydiumSwapProcessor {}
-
 
 pub struct RaydiumSwapAccounts<'info> {
     pub dex_program_id: &'info AccountInfo<'info>,
@@ -39,6 +41,20 @@ pub struct RaydiumSwapAccounts<'info> {
     pub serum_vault_signer: &'info AccountInfo<'info>,
 }
 const ACCOUNTS_LEN: usize = 19;
+
+pub struct RaydiumSwapV2Accounts<'info> {
+    pub dex_program_id: &'info AccountInfo<'info>,
+    pub swap_authority_pubkey: &'info AccountInfo<'info>,
+    pub swap_source_token: InterfaceAccount<'info, TokenAccount>,
+    pub swap_destination_token: InterfaceAccount<'info, TokenAccount>,
+
+    pub token_program: Program<'info, Token>,
+    pub amm_id: &'info AccountInfo<'info>,
+    pub amm_authority: &'info AccountInfo<'info>,
+    pub pool_coin_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub pool_pc_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+}
+const ACCOUNTS_V2_LEN: usize = 9;
 
 pub struct RaydiumStableAccounts<'info> {
     pub dex_program_id: &'info AccountInfo<'info>,
@@ -111,8 +127,8 @@ pub struct RaydiumCpmmAccounts<'info> {
     pub swap_authority_pubkey: &'info AccountInfo<'info>,
     pub swap_source_token: InterfaceAccount<'info, TokenAccount>,
     pub swap_destination_token: InterfaceAccount<'info, TokenAccount>,
-    
-    pub authority: &'info AccountInfo<'info>,  
+
+    pub authority: &'info AccountInfo<'info>,
     pub amm_config: &'info AccountInfo<'info>,
     pub pool_state: &'info AccountInfo<'info>,
     pub input_vault: InterfaceAccount<'info, TokenAccount>,
@@ -147,7 +163,7 @@ impl<'info> RaydiumSwapAccounts<'info> {
             serum_coin_vault_account,
             serum_pc_vault_account,
             serum_vault_signer,
-        ]: & [AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -166,9 +182,39 @@ impl<'info> RaydiumSwapAccounts<'info> {
             serum_bids,
             serum_asks,
             serum_event_queue,
-            serum_coin_vault_account: Box::new(InterfaceAccount::try_from(serum_coin_vault_account)?),
+            serum_coin_vault_account: Box::new(InterfaceAccount::try_from(
+                serum_coin_vault_account,
+            )?),
             serum_pc_vault_account: Box::new(InterfaceAccount::try_from(serum_pc_vault_account)?),
             serum_vault_signer,
+        })
+    }
+}
+
+impl<'info> RaydiumSwapV2Accounts<'info> {
+    fn parse_accounts(accounts: &'info [AccountInfo<'info>], offset: usize) -> Result<Self> {
+        let [
+            dex_program_id,
+            swap_authority_pubkey,
+            swap_source_token,
+            swap_destination_token,
+            token_program,
+            amm_id,
+            amm_authority,
+            pool_coin_token_account,
+            pool_pc_token_account,
+        ]: &[AccountInfo<'info>; ACCOUNTS_V2_LEN] = array_ref![accounts, offset, ACCOUNTS_V2_LEN];
+
+        Ok(Self {
+            dex_program_id,
+            swap_authority_pubkey,
+            swap_source_token: InterfaceAccount::try_from(swap_source_token)?,
+            swap_destination_token: InterfaceAccount::try_from(swap_destination_token)?,
+            token_program: Program::try_from(token_program)?,
+            amm_id,
+            amm_authority,
+            pool_coin_token_account: Box::new(InterfaceAccount::try_from(pool_coin_token_account)?),
+            pool_pc_token_account: Box::new(InterfaceAccount::try_from(pool_pc_token_account)?),
         })
     }
 }
@@ -195,7 +241,8 @@ impl<'info> RaydiumStableAccounts<'info> {
             serum_coin_vault_account,
             serum_pc_vault_account,
             serum_vault_signer,
-      ]: & [AccountInfo<'info>; STABLE_ACCOUNTS_LEN] = array_ref![accounts, offset, STABLE_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; STABLE_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, STABLE_ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -214,7 +261,9 @@ impl<'info> RaydiumStableAccounts<'info> {
             serum_bids,
             serum_asks,
             serum_event_queue,
-            serum_coin_vault_account: Box::new(InterfaceAccount::try_from(serum_coin_vault_account)?),
+            serum_coin_vault_account: Box::new(InterfaceAccount::try_from(
+                serum_coin_vault_account,
+            )?),
             serum_pc_vault_account: Box::new(InterfaceAccount::try_from(serum_pc_vault_account)?),
             serum_vault_signer,
         })
@@ -238,7 +287,8 @@ impl<'info> RaydiumClmmAccounts<'info> {
             tick_array1,
             tick_array2,
             token_program,
-      ]: & [AccountInfo<'info>; CLMM_ACCOUNTS_LEN] = array_ref![accounts, offset, CLMM_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; CLMM_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, CLMM_ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -280,8 +330,8 @@ impl<'info> RaydiumClmmV2Accounts<'info> {
             tick_array0,
             tick_array1,
             tick_array2,
-        
-      ]: & [AccountInfo<'info>; CLMM_V2_ACCOUNTS_LEN] = array_ref![accounts, offset, CLMM_V2_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; CLMM_V2_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, CLMM_V2_ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -323,7 +373,8 @@ impl<'info> RaydiumCpmmAccounts<'info> {
             input_token_mint,
             output_token_mint,
             observation_state,
-        ]: & [AccountInfo<'info>; CPMM_ACCOUNTS_LEN] = array_ref![accounts, offset, CPMM_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; CPMM_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, CPMM_ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -353,15 +404,8 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::RaydiumSwap amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    msg!("Dex::RaydiumSwap amount_in: {}, offset: {}", amount_in, offset);
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
 
     let mut swap_accounts = RaydiumSwapAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &raydium_swap_program::id() {
@@ -434,13 +478,10 @@ pub fn swap<'a>(
         swap_accounts.swap_authority_pubkey.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
-    let dex_processor = &RaydiumSwapProcessor;  
+    let dex_processor = &RaydiumSwapProcessor;
     let amount_out = invoke_process(
         amount_in,
         dex_processor,
@@ -458,6 +499,89 @@ pub fn swap<'a>(
     Ok(amount_out)
 }
 
+pub fn swap_v2<'a>(
+    remaining_accounts: &'a [AccountInfo<'a>],
+    amount_in: u64,
+    offset: &mut usize,
+    hop_accounts: &mut HopAccounts,
+    hop: usize,
+    proxy_swap: bool,
+    owner_seeds: Option<&[&[&[u8]]]>,
+) -> Result<u64> {
+    msg!("Dex::RaydiumSwapV2 amount_in: {}, offset: {}", amount_in, offset);
+    require!(
+        remaining_accounts.len() >= *offset + ACCOUNTS_V2_LEN,
+        ErrorCode::InvalidAccountsLength
+    );
+
+    let mut swap_accounts = RaydiumSwapV2Accounts::parse_accounts(remaining_accounts, *offset)?;
+    if swap_accounts.dex_program_id.key != &raydium_swap_program::id() {
+        return Err(ErrorCode::InvalidProgramId.into());
+    }
+    // log pool address
+    swap_accounts.amm_id.key().log();
+
+    // check hop accounts & swap authority
+    let swap_source_token = swap_accounts.swap_source_token.key();
+    let swap_destination_token = swap_accounts.swap_destination_token.key();
+    before_check(
+        &swap_accounts.swap_authority_pubkey,
+        &swap_accounts.swap_source_token,
+        swap_destination_token,
+        hop_accounts,
+        hop,
+        proxy_swap,
+        owner_seeds,
+    )?;
+
+    let mut data = Vec::with_capacity(ARGS_LEN);
+    data.push(16);
+    data.extend_from_slice(&amount_in.to_le_bytes());
+    data.extend_from_slice(&1u64.to_le_bytes());
+
+    let accounts = vec![
+        AccountMeta::new_readonly(swap_accounts.token_program.key(), false),
+        AccountMeta::new(swap_accounts.amm_id.key(), false),
+        AccountMeta::new_readonly(swap_accounts.amm_authority.key(), false),
+        AccountMeta::new(swap_accounts.pool_coin_token_account.key(), false),
+        AccountMeta::new(swap_accounts.pool_pc_token_account.key(), false),
+        AccountMeta::new(swap_source_token, false),
+        AccountMeta::new(swap_destination_token, false),
+        AccountMeta::new_readonly(swap_accounts.swap_authority_pubkey.key(), true),
+    ];
+
+    let account_infos = vec![
+        swap_accounts.token_program.to_account_info(),
+        swap_accounts.amm_id.to_account_info(),
+        swap_accounts.amm_authority.to_account_info(),
+        swap_accounts.pool_coin_token_account.to_account_info(),
+        swap_accounts.pool_pc_token_account.to_account_info(),
+        swap_accounts.swap_source_token.to_account_info(),
+        swap_accounts.swap_destination_token.to_account_info(),
+        swap_accounts.swap_authority_pubkey.to_account_info(),
+    ];
+
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
+
+    let dex_processor = &RaydiumSwapProcessor;
+    let amount_out = invoke_process(
+        amount_in,
+        dex_processor,
+        &account_infos,
+        &mut swap_accounts.swap_source_token,
+        &mut swap_accounts.swap_destination_token,
+        hop_accounts,
+        instruction,
+        hop,
+        offset,
+        ACCOUNTS_V2_LEN,
+        proxy_swap,
+        owner_seeds,
+    )?;
+    Ok(amount_out)
+}
+
 pub fn swap_stable<'a>(
     remaining_accounts: &'a [AccountInfo<'a>],
     amount_in: u64,
@@ -467,11 +591,7 @@ pub fn swap_stable<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::RaydiumStable amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::RaydiumStable amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + STABLE_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -548,11 +668,8 @@ pub fn swap_stable<'a>(
         swap_accounts.swap_authority_pubkey.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &RaydiumSwapProcessor;
     let amount_out = invoke_process(
@@ -581,11 +698,7 @@ pub fn swap_clmm<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::RaydiumClmmSwap amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::RaydiumClmmSwap amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + CLMM_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -661,14 +774,10 @@ pub fn swap_clmm<'a>(
         account_infos.push(swap_accounts.tick_array2.to_account_info());
     }
 
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
-
-    let dex_processor = &RaydiumSwapProcessor;  
+    let dex_processor = &RaydiumSwapProcessor;
     let amount_out = invoke_process(
         amount_in,
         dex_processor,
@@ -695,11 +804,7 @@ pub fn swap_clmm_v2<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::RaydiumClmmSwapV2 amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::RaydiumClmmSwapV2 amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + CLMM_V2_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -716,13 +821,13 @@ pub fn swap_clmm_v2<'a>(
     let swap_source_token = swap_accounts.swap_source_token.key();
     let swap_destination_token = swap_accounts.swap_destination_token.key();
     before_check(
-       &swap_accounts.swap_authority_pubkey,
-       &swap_accounts.swap_source_token,
-       swap_destination_token,
-       hop_accounts,
-       hop,
-       proxy_swap,
-       owner_seeds,
+        &swap_accounts.swap_authority_pubkey,
+        &swap_accounts.swap_source_token,
+        swap_destination_token,
+        hop_accounts,
+        hop,
+        proxy_swap,
+        owner_seeds,
     )?;
 
     let is_base_input = true;
@@ -747,8 +852,8 @@ pub fn swap_clmm_v2<'a>(
         AccountMeta::new(swap_accounts.observation_id.key(), false),
         AccountMeta::new_readonly(swap_accounts.token_program.key(), false), // spl token
         AccountMeta::new_readonly(swap_accounts.token_program_2022.key(), false), // token 2022
-        AccountMeta::new_readonly(swap_accounts.memo_program.key(), false), 
-        AccountMeta::new_readonly(swap_accounts.input_vault_mint.key(), false), 
+        AccountMeta::new_readonly(swap_accounts.memo_program.key(), false),
+        AccountMeta::new_readonly(swap_accounts.input_vault_mint.key(), false),
         AccountMeta::new_readonly(swap_accounts.output_vault_mint.key(), false),
         AccountMeta::new(swap_accounts.ex_bitmap.key(), false),
         AccountMeta::new(swap_accounts.tick_array0.key(), false),
@@ -783,13 +888,10 @@ pub fn swap_clmm_v2<'a>(
         account_infos.push(swap_accounts.tick_array2.to_account_info());
     }
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
-    let dex_processor = &RaydiumSwapProcessor;  
+    let dex_processor = &RaydiumSwapProcessor;
     let amount_out = invoke_process(
         amount_in,
         dex_processor,
@@ -816,12 +918,8 @@ pub fn swap_cpmm<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::RaydiumCpmmSwap amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    
+    msg!("Dex::RaydiumCpmmSwap amount_in: {}, offset: {}", amount_in, offset);
+
     require!(
         remaining_accounts.len() >= *offset + CPMM_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -854,7 +952,7 @@ pub fn swap_cpmm<'a>(
     data.extend_from_slice(&minimum_amount_out.to_le_bytes());
 
     let accounts = vec![
-        AccountMeta::new(swap_accounts.swap_authority_pubkey.key(), true), 
+        AccountMeta::new(swap_accounts.swap_authority_pubkey.key(), true),
         AccountMeta::new_readonly(swap_accounts.authority.key(), false),
         AccountMeta::new_readonly(swap_accounts.amm_config.key(), false),
         AccountMeta::new(swap_accounts.pool_state.key(), false),
@@ -885,13 +983,10 @@ pub fn swap_cpmm<'a>(
         swap_accounts.observation_state.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
-    let dex_processor = &RaydiumSwapProcessor;  
+    let dex_processor = &RaydiumSwapProcessor;
     let amount_out = invoke_process(
         amount_in,
         dex_processor,

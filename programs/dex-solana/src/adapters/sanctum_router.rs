@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process, invoke_processes};
 use crate::error::ErrorCode;
-use crate::{lido_sol_mint, marinade_sol_mint, sanctum_router_program, wsol_program, HopAccounts};
+use crate::{HopAccounts, lido_sol_mint, marinade_sol_mint, sanctum_router_program, wsol_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use arrayref::array_ref;
@@ -69,8 +69,7 @@ impl<'info> SanctumStakeWsol<'info> {
             wsol_mint,
             token_program,
             system_program,
-         ]: &[AccountInfo<'info>;
-         STAKE_WRAPPED_SOL_IX_ACCOUNTS_LEN] =
+        ]: &[AccountInfo<'info>; STAKE_WRAPPED_SOL_IX_ACCOUNTS_LEN] =
             array_ref![accounts, offset, STAKE_WRAPPED_SOL_IX_ACCOUNTS_LEN];
         Ok(SanctumStakeWsol {
             dex_program_id,
@@ -100,10 +99,8 @@ impl<'info> SanctumStakeWsol<'info> {
 
     fn get_token_accounts_mut(
         &mut self,
-    ) -> (
-        &mut InterfaceAccount<'info, TokenAccount>,
-        &mut InterfaceAccount<'info, TokenAccount>,
-    ) {
+    ) -> (&mut InterfaceAccount<'info, TokenAccount>, &mut InterfaceAccount<'info, TokenAccount>)
+    {
         (&mut self.wsol_from, &mut self.dest_token_to)
     }
 
@@ -114,51 +111,23 @@ impl<'info> SanctumStakeWsol<'info> {
                 is_signer: true,
                 is_writable: false,
             },
-            AccountMeta {
-                pubkey: self.wsol_from.key(),
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: self.dest_token_to.key(),
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: self.wsol_bridge_in.key(),
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: self.sol_bridge_out.key(),
-                is_signer: false,
-                is_writable: true,
-            },
+            AccountMeta { pubkey: self.wsol_from.key(), is_signer: false, is_writable: true },
+            AccountMeta { pubkey: self.dest_token_to.key(), is_signer: false, is_writable: true },
+            AccountMeta { pubkey: self.wsol_bridge_in.key(), is_signer: false, is_writable: true },
+            AccountMeta { pubkey: self.sol_bridge_out.key(), is_signer: false, is_writable: true },
             AccountMeta {
                 pubkey: self.dest_token_fee_token_account.key(),
                 is_signer: false,
                 is_writable: true,
             },
-            AccountMeta {
-                pubkey: self.dest_token_mint.key(),
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: self.wsol_mint.key(),
-                is_signer: false,
-                is_writable: false,
-            },
+            AccountMeta { pubkey: self.dest_token_mint.key(), is_signer: false, is_writable: true },
+            AccountMeta { pubkey: self.wsol_mint.key(), is_signer: false, is_writable: false },
             AccountMeta {
                 pubkey: self.token_program.key().key(),
                 is_signer: false,
                 is_writable: false,
             },
-            AccountMeta {
-                pubkey: self.system_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
+            AccountMeta { pubkey: self.system_program.key(), is_signer: false, is_writable: false },
         ]
     }
     fn get_accountinfos(&self) -> Vec<AccountInfo<'info>> {
@@ -197,8 +166,9 @@ impl<'info> MarinadeSolDeposit<'info> {
             marinade_reserve,
             marinade_liq_pool_msol_leg,
             marinade_liq_pool_msol_leg_auth,
-            marinade_liq_pool_sol_leg,           
-            ]: & [AccountInfo<'info>; MARINADE_DEPOSIT_SOL_IX_ACCOUNTS_LEN] = array_ref![accounts, offset, MARINADE_DEPOSIT_SOL_IX_ACCOUNTS_LEN];
+            marinade_liq_pool_sol_leg,
+        ]: &[AccountInfo<'info>; MARINADE_DEPOSIT_SOL_IX_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, MARINADE_DEPOSIT_SOL_IX_ACCOUNTS_LEN];
         Ok(MarinadeSolDeposit {
             marinade_program,
             marinade_state,
@@ -220,7 +190,7 @@ impl<'info> StakeDexAccounts<'info> for MarinadeSolDeposit<'info> {
             self.marinade_reserve.to_account_info(),
             self.marinade_liq_pool_msol_leg.to_account_info(),
             self.marinade_liq_pool_msol_leg_auth.to_account_info(),
-            self.marinade_liq_pool_sol_leg.to_account_info(),        
+            self.marinade_liq_pool_sol_leg.to_account_info(),
         ]
     }
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
@@ -230,11 +200,7 @@ impl<'info> StakeDexAccounts<'info> for MarinadeSolDeposit<'info> {
                 is_signer: false,
                 is_writable: false,
             },
-            AccountMeta {
-                pubkey: self.marinade_state.key(),
-                is_signer: false,
-                is_writable: true,
-            },
+            AccountMeta { pubkey: self.marinade_state.key(), is_signer: false, is_writable: true },
             AccountMeta {
                 pubkey: self.marinade_liq_pool_sol_leg.key(),
                 is_signer: false,
@@ -280,7 +246,8 @@ impl<'info> SplSolDeposit<'info> {
             stake_pool_withdraw_authority,
             stake_pool_reserve_stake,
             stake_pool_manager_fee,
-            ]: & [AccountInfo<'info>; SPL_STAKE_POOL_DEPOSIT_SOL_IX_ACCOUNTS_LEN] = array_ref![accounts, offset, SPL_STAKE_POOL_DEPOSIT_SOL_IX_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; SPL_STAKE_POOL_DEPOSIT_SOL_IX_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, SPL_STAKE_POOL_DEPOSIT_SOL_IX_ACCOUNTS_LEN];
         Ok(SplSolDeposit {
             spl_stake_pool_program,
             stake_pool,
@@ -299,11 +266,7 @@ impl<'info> StakeDexAccounts<'info> for SplSolDeposit<'info> {
                 is_signer: false,
                 is_writable: false,
             },
-            AccountMeta {
-                pubkey: self.stake_pool.key(),
-                is_signer: false,
-                is_writable: true,
-            },
+            AccountMeta { pubkey: self.stake_pool.key(), is_signer: false, is_writable: true },
             AccountMeta {
                 pubkey: self.stake_pool_withdraw_authority.key(),
                 is_signer: false,
@@ -387,8 +350,9 @@ impl<'info> SanctumPrefundWithdrawStake<'info> {
             unstake_protocol_fee_dest,
             clock,
             stake_program,
-            system_program
-        ]: & [AccountInfo<'info>; PREFUND_WITHDRAW_STAKE_IX_ACCOUNTS_LEN] = array_ref![accounts, offset, PREFUND_WITHDRAW_STAKE_IX_ACCOUNTS_LEN];
+            system_program,
+        ]: &[AccountInfo<'info>; PREFUND_WITHDRAW_STAKE_IX_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, PREFUND_WITHDRAW_STAKE_IX_ACCOUNTS_LEN];
         Ok(SanctumPrefundWithdrawStake {
             dex_program_id,
             swap_authority_pubkey: Box::new(SystemAccount::try_from(swap_authority_pubkey)?),
@@ -425,51 +389,23 @@ impl<'info> SanctumPrefundWithdrawStake<'info> {
                 is_signer: true,
                 is_writable: true,
             },
-            AccountMeta {
-                pubkey: self.src_token_from.key(),
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: self.bridge_stake.key(),
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: self.src_token_mint.key(),
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: self.prefunder.key(),
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: self.slumdog_stake.key(),
-                is_signer: false,
-                is_writable: true,
-            },
+            AccountMeta { pubkey: self.src_token_from.key(), is_signer: false, is_writable: true },
+            AccountMeta { pubkey: self.bridge_stake.key(), is_signer: false, is_writable: true },
+            AccountMeta { pubkey: self.src_token_mint.key(), is_signer: false, is_writable: true },
+            AccountMeta { pubkey: self.prefunder.key(), is_signer: false, is_writable: true },
+            AccountMeta { pubkey: self.slumdog_stake.key(), is_signer: false, is_writable: true },
             AccountMeta {
                 pubkey: self.unstakeit_program.key(),
                 is_signer: false,
                 is_writable: false,
             },
-            AccountMeta {
-                pubkey: self.unstake_pool.key(),
-                is_signer: false,
-                is_writable: true,
-            },
+            AccountMeta { pubkey: self.unstake_pool.key(), is_signer: false, is_writable: true },
             AccountMeta {
                 pubkey: self.pool_sol_reserves.key(),
                 is_signer: false,
                 is_writable: true,
             },
-            AccountMeta {
-                pubkey: self.unstake_fee.key(),
-                is_signer: false,
-                is_writable: false,
-            },
+            AccountMeta { pubkey: self.unstake_fee.key(), is_signer: false, is_writable: false },
             AccountMeta {
                 pubkey: self.slumdog_stake_acc_record.key(),
                 is_signer: false,
@@ -485,21 +421,9 @@ impl<'info> SanctumPrefundWithdrawStake<'info> {
                 is_signer: false,
                 is_writable: true,
             },
-            AccountMeta {
-                pubkey: self.clock.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.stake_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.system_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
+            AccountMeta { pubkey: self.clock.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.stake_program.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.system_program.key(), is_signer: false, is_writable: false },
         ]
     }
 
@@ -540,11 +464,7 @@ pub struct LidoWithdrawStake<'info> {
 impl<'info> StakeDexAccounts<'info> for LidoWithdrawStake<'info> {
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
         vec![
-            AccountMeta {
-                pubkey: self.lido_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
+            AccountMeta { pubkey: self.lido_program.key(), is_signer: false, is_writable: false },
             AccountMeta {
                 pubkey: self.withdraw_stake_solido.key(),
                 is_signer: false,
@@ -570,26 +490,10 @@ impl<'info> StakeDexAccounts<'info> for LidoWithdrawStake<'info> {
                 is_signer: false,
                 is_writable: true,
             },
-            AccountMeta {
-                pubkey: self.clock.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.token_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.stake_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.system_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
+            AccountMeta { pubkey: self.clock.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.token_program.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.stake_program.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.system_program.key(), is_signer: false, is_writable: false },
         ]
     }
     fn get_accountinfos(&self) -> Vec<AccountInfo<'info>> {
@@ -619,8 +523,9 @@ impl<'info> LidoWithdrawStake<'info> {
             clock,
             token_program,
             stake_program,
-            system_program
-        ]: & [AccountInfo<'info>; LIDO_WITHDRAW_STAKE_IX_ACCOUNTS_LEN] = array_ref![accounts, offset, LIDO_WITHDRAW_STAKE_IX_ACCOUNTS_LEN];
+            system_program,
+        ]: &[AccountInfo<'info>; LIDO_WITHDRAW_STAKE_IX_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, LIDO_WITHDRAW_STAKE_IX_ACCOUNTS_LEN];
         Ok(LidoWithdrawStake {
             lido_program,
             withdraw_stake_solido,
@@ -643,7 +548,7 @@ pub struct SplStakePoolWithdrawStake<'info> {
     pub withdraw_stake_withdraw_authority: &'info AccountInfo<'info>,
     pub withdraw_stake_stake_to_split: &'info AccountInfo<'info>,
     pub withdraw_stake_manager_fee: &'info AccountInfo<'info>,
-    pub clock:Box< Sysvar<'info, Clock>>,
+    pub clock: Box<Sysvar<'info, Clock>>,
     pub token_program: Box<Interface<'info, TokenInterface>>,
     pub stake_program: &'info AccountInfo<'info>,
     pub system_program: Box<Program<'info, System>>,
@@ -661,8 +566,9 @@ impl<'info> SplStakePoolWithdrawStake<'info> {
             clock,
             token_program,
             stake_program,
-            system_program
-        ]: & [AccountInfo<'info>; SPL_STAKEPOOL_WITHDRAW_STAKE_ACCOUNTS_LEN] = array_ref![accounts, offset, SPL_STAKEPOOL_WITHDRAW_STAKE_ACCOUNTS_LEN];
+            system_program,
+        ]: &[AccountInfo<'info>; SPL_STAKEPOOL_WITHDRAW_STAKE_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, SPL_STAKEPOOL_WITHDRAW_STAKE_ACCOUNTS_LEN];
         Ok(SplStakePoolWithdrawStake {
             spl_stake_pool_program,
             withdraw_stake_spl_stake_pool,
@@ -710,26 +616,10 @@ impl<'info> StakeDexAccounts<'info> for SplStakePoolWithdrawStake<'info> {
                 is_signer: false,
                 is_writable: true,
             },
-            AccountMeta {
-                pubkey: self.clock.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.token_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.stake_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.system_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
+            AccountMeta { pubkey: self.clock.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.token_program.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.stake_program.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.system_program.key(), is_signer: false, is_writable: false },
         ]
     }
 
@@ -766,13 +656,14 @@ pub struct SanctumDepositStake<'info> {
 impl<'info> SanctumDepositStake<'info> {
     fn parse_accounts(accounts: &'info [AccountInfo<'info>], offset: usize) -> Result<Self> {
         let [
-                dex_program_id,
-                swap_authority_pubkey,
-                stake_account,
-                dest_token_to,
-                dest_token_fee_token_account,
-                dest_token_mint
-            ]: & [AccountInfo<'info>; DEPOSIT_STAKE_IX_ACCOUNTS_LEN] = array_ref![accounts, offset, DEPOSIT_STAKE_IX_ACCOUNTS_LEN];
+            dex_program_id,
+            swap_authority_pubkey,
+            stake_account,
+            dest_token_to,
+            dest_token_fee_token_account,
+            dest_token_mint,
+        ]: &[AccountInfo<'info>; DEPOSIT_STAKE_IX_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, DEPOSIT_STAKE_IX_ACCOUNTS_LEN];
         Ok(SanctumDepositStake {
             dex_program_id,
             swap_authority_pubkey,
@@ -802,26 +693,14 @@ impl<'info> SanctumDepositStake<'info> {
                 is_signer: true,
                 is_writable: true,
             },
-            AccountMeta {
-                pubkey: self.stake_account.key(),
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: self.dest_token_to.key(),
-                is_signer: false,
-                is_writable: true,
-            },
+            AccountMeta { pubkey: self.stake_account.key(), is_signer: false, is_writable: true },
+            AccountMeta { pubkey: self.dest_token_to.key(), is_signer: false, is_writable: true },
             AccountMeta {
                 pubkey: self.dest_token_fee_token_account.key(),
                 is_signer: false,
                 is_writable: true,
             },
-            AccountMeta {
-                pubkey: self.dest_token_mint.key(),
-                is_signer: false,
-                is_writable: true,
-            },
+            AccountMeta { pubkey: self.dest_token_mint.key(), is_signer: false, is_writable: true },
         ]
     }
 
@@ -865,7 +744,8 @@ impl<'info> MarinadeStakeDeposit<'info> {
             system_program,
             token_program,
             stake_program,
-    ]: & [AccountInfo<'info>; MARINADE_DEPOSIT_STAKE_IX_ACCOUNTS_LEN] = array_ref![accounts, offset, MARINADE_DEPOSIT_STAKE_IX_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; MARINADE_DEPOSIT_STAKE_IX_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, MARINADE_DEPOSIT_STAKE_IX_ACCOUNTS_LEN];
         Ok(MarinadeStakeDeposit {
             marinade_program,
             deposit_stake_marinade_state,
@@ -874,17 +754,17 @@ impl<'info> MarinadeStakeDeposit<'info> {
             deposit_stake_duplication_flag,
             deposit_stake_msol_mint_auth,
             clock: Box::new(Sysvar::<Clock>::from_account_info(clock)?),
-            rent : Box::new(Sysvar::<Rent>::from_account_info(rent)?),
+            rent: Box::new(Sysvar::<Rent>::from_account_info(rent)?),
             system_program: Box::new(Program::try_from(system_program)?),
             token_program: Box::new(Interface::try_from(token_program)?),
-            stake_program
+            stake_program,
         })
     }
 }
 
-impl<'info> StakeDexAccounts<'info> for MarinadeStakeDeposit<'info>{
+impl<'info> StakeDexAccounts<'info> for MarinadeStakeDeposit<'info> {
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
-        vec!       [
+        vec![
             AccountMeta {
                 pubkey: self.marinade_program.key(),
                 is_signer: false,
@@ -915,31 +795,11 @@ impl<'info> StakeDexAccounts<'info> for MarinadeStakeDeposit<'info>{
                 is_signer: false,
                 is_writable: false,
             },
-            AccountMeta {
-                pubkey: self.clock.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.rent.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.system_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.token_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.stake_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
+            AccountMeta { pubkey: self.clock.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.rent.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.system_program.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.token_program.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.stake_program.key(), is_signer: false, is_writable: false },
         ]
     }
     fn get_accountinfos(&self) -> Vec<AccountInfo<'info>> {
@@ -974,7 +834,7 @@ pub struct SplStakeDeposit<'info> {
     pub stake_program: &'info AccountInfo<'info>,
 }
 
-impl<'info> StakeDexAccounts<'info> for SplStakeDeposit<'info>{
+impl<'info> StakeDexAccounts<'info> for SplStakeDeposit<'info> {
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
         vec![
             AccountMeta {
@@ -1017,26 +877,10 @@ impl<'info> StakeDexAccounts<'info> for SplStakeDeposit<'info>{
                 is_signer: false,
                 is_writable: true,
             },
-            AccountMeta {
-                pubkey: self.clock.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.stake_history.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.token_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.stake_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
+            AccountMeta { pubkey: self.clock.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.stake_history.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.token_program.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.stake_program.key(), is_signer: false, is_writable: false },
         ]
     }
 
@@ -1061,19 +905,20 @@ impl<'info> StakeDexAccounts<'info> for SplStakeDeposit<'info>{
 impl<'info> SplStakeDeposit<'info> {
     fn parse_accounts(accounts: &'info [AccountInfo<'info>], offset: usize) -> Result<Self> {
         let [
-        spl_stake_pool_program,
-        deposit_stake_spl_stake_pool,
-        deposit_stake_validator_list,
-        deposit_stake_deposit_authority,
-        deposit_stake_withdraw_authority,
-        deposit_stake_validator_stake,
-        deposit_stake_reserve_stake,
-        deposit_stake_manager_fee,
-        clock,
-        stake_history,
-        token_program,
-        stake_program
-    ]: & [AccountInfo<'info>; SPL_STAKEPOOL_DEPOSIT_ACCOUNTS_LEN] = array_ref![accounts, offset, SPL_STAKEPOOL_DEPOSIT_ACCOUNTS_LEN];
+            spl_stake_pool_program,
+            deposit_stake_spl_stake_pool,
+            deposit_stake_validator_list,
+            deposit_stake_deposit_authority,
+            deposit_stake_withdraw_authority,
+            deposit_stake_validator_stake,
+            deposit_stake_reserve_stake,
+            deposit_stake_manager_fee,
+            clock,
+            stake_history,
+            token_program,
+            stake_program,
+        ]: &[AccountInfo<'info>; SPL_STAKEPOOL_DEPOSIT_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, SPL_STAKEPOOL_DEPOSIT_ACCOUNTS_LEN];
         Ok(SplStakeDeposit {
             spl_stake_pool_program,
             deposit_stake_spl_stake_pool,
@@ -1101,22 +946,23 @@ pub struct SplStakePoolWithdrawSol<'info> {
     pub stake_history: &'info AccountInfo<'info>,
     pub stake_program: &'info AccountInfo<'info>,
     ///possible duplicate to account for token-22 stake pools
-    pub token_program: Interface<'info, TokenInterface>
+    pub token_program: Interface<'info, TokenInterface>,
 }
 
 impl<'info> SplStakePoolWithdrawSol<'info> {
     fn parse_accounts(accounts: &'info [AccountInfo<'info>], offset: usize) -> Result<Self> {
         let [
-        spl_stake_pool_program,
-        withdraw_sol_spl_stake_pool,
-        withdraw_sol_withdraw_authority,
-        withdraw_sol_reserve_stake,
-        withdraw_sol_manager_fee,
-        clock,
-        stake_history,
-        stake_program,
-        token_program
-    ]: & [AccountInfo<'info>; SPL_STAKEPOOL_WITHDRAW_SOL_ACCOUNTS_LEN] = array_ref![accounts, offset, SPL_STAKEPOOL_WITHDRAW_SOL_ACCOUNTS_LEN];
+            spl_stake_pool_program,
+            withdraw_sol_spl_stake_pool,
+            withdraw_sol_withdraw_authority,
+            withdraw_sol_reserve_stake,
+            withdraw_sol_manager_fee,
+            clock,
+            stake_history,
+            stake_program,
+            token_program,
+        ]: &[AccountInfo<'info>; SPL_STAKEPOOL_WITHDRAW_SOL_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, SPL_STAKEPOOL_WITHDRAW_SOL_ACCOUNTS_LEN];
         Ok(SplStakePoolWithdrawSol {
             spl_stake_pool_program,
             withdraw_sol_spl_stake_pool,
@@ -1131,7 +977,7 @@ impl<'info> SplStakePoolWithdrawSol<'info> {
     }
 }
 
-impl<'info> StakeDexAccounts<'info> for SplStakePoolWithdrawSol<'info>{
+impl<'info> StakeDexAccounts<'info> for SplStakePoolWithdrawSol<'info> {
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
         vec![
             AccountMeta {
@@ -1159,26 +1005,10 @@ impl<'info> StakeDexAccounts<'info> for SplStakePoolWithdrawSol<'info>{
                 is_signer: false,
                 is_writable: true,
             },
-            AccountMeta {
-                pubkey: self.clock.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.stake_history.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.stake_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.token_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
+            AccountMeta { pubkey: self.clock.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.stake_history.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.stake_program.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.token_program.key(), is_signer: false, is_writable: false },
         ]
     }
     fn get_accountinfos(&self) -> Vec<AccountInfo<'info>> {
@@ -1225,34 +1055,31 @@ impl<'info> SanctumWithdrawWsol<'info> {
             src_token_mint,
             wsol_mint,
             token_program,
-        ]: & [AccountInfo<'info>; WITHDRAW_WRAPPED_SOL_IX_ACCOUNTS_LEN] = array_ref![accounts, offset, WITHDRAW_WRAPPED_SOL_IX_ACCOUNTS_LEN];
-        Ok(
-            SanctumWithdrawWsol {
-                dex_program_id,
-                swap_authority_pubkey: SystemAccount::try_from(swap_authority_pubkey)?,
-                src_token_from: InterfaceAccount::try_from(src_token_from)?,
-                wsol_to: InterfaceAccount::try_from(wsol_to)?,
-                wsol_fee_token_account: wsol_fee_token_account,
-                src_token_mint: InterfaceAccount::try_from(src_token_mint)?,
-                wsol_mint: InterfaceAccount::try_from(wsol_mint)?,
-                token_program: Interface::try_from(token_program)?,
-            }
-        )
+        ]: &[AccountInfo<'info>; WITHDRAW_WRAPPED_SOL_IX_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, WITHDRAW_WRAPPED_SOL_IX_ACCOUNTS_LEN];
+        Ok(SanctumWithdrawWsol {
+            dex_program_id,
+            swap_authority_pubkey: SystemAccount::try_from(swap_authority_pubkey)?,
+            src_token_from: InterfaceAccount::try_from(src_token_from)?,
+            wsol_to: InterfaceAccount::try_from(wsol_to)?,
+            wsol_fee_token_account,
+            src_token_mint: InterfaceAccount::try_from(src_token_mint)?,
+            wsol_mint: InterfaceAccount::try_from(wsol_mint)?,
+            token_program: Interface::try_from(token_program)?,
+        })
     }
     fn dex_program_id(&self) -> &AccountInfo<'info> {
         self.dex_program_id
     }
-    
+
     fn dst_token_account(&self) -> &InterfaceAccount<'info, TokenAccount> {
         &self.wsol_to
     }
-    
+
     fn get_token_accounts_mut(
         &mut self,
-    ) -> (
-        &mut InterfaceAccount<'info, TokenAccount>,
-        &mut InterfaceAccount<'info, TokenAccount>,
-    ) {
+    ) -> (&mut InterfaceAccount<'info, TokenAccount>, &mut InterfaceAccount<'info, TokenAccount>)
+    {
         (&mut self.src_token_from, &mut self.wsol_to)
     }
     fn get_accountmetas(&self) -> Vec<AccountMeta> {
@@ -1262,36 +1089,16 @@ impl<'info> SanctumWithdrawWsol<'info> {
                 is_signer: true,
                 is_writable: false,
             },
-            AccountMeta {
-                pubkey: self.src_token_from.key(),
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: self.wsol_to.key(),
-                is_signer: false,
-                is_writable: true,
-            },
+            AccountMeta { pubkey: self.src_token_from.key(), is_signer: false, is_writable: true },
+            AccountMeta { pubkey: self.wsol_to.key(), is_signer: false, is_writable: true },
             AccountMeta {
                 pubkey: self.wsol_fee_token_account.key(),
                 is_signer: false,
                 is_writable: true,
             },
-            AccountMeta {
-                pubkey: self.src_token_mint.key(),
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: self.wsol_mint.key(),
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: self.token_program.key(),
-                is_signer: false,
-                is_writable: false,
-            },
+            AccountMeta { pubkey: self.src_token_mint.key(), is_signer: false, is_writable: true },
+            AccountMeta { pubkey: self.wsol_mint.key(), is_signer: false, is_writable: false },
+            AccountMeta { pubkey: self.token_program.key(), is_signer: false, is_writable: false },
         ]
     }
     fn get_accountinfos(&self) -> Vec<AccountInfo<'info>> {
@@ -1321,12 +1128,12 @@ pub fn sanctum_router_handler<'a>(
     //check wsol mint at index 8 if its a stake wsol ix
     if remaining_accounts[6 + *offset].key() == wsol_program::id() {
         withdraw_wsol_handler(
-            remaining_accounts, 
-            amount_in, 
-            offset, 
-            hop_accounts, 
-            hop, 
-            proxy_swap, 
+            remaining_accounts,
+            amount_in,
+            offset,
+            hop_accounts,
+            hop,
+            proxy_swap,
             order_id,
             owner_seeds,
         )
@@ -1365,11 +1172,7 @@ pub fn stake_wsol_handler<'a>(
     _order_id: u64,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::SanctumRouterStakeWSol amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::SanctumRouterStakeWSol amount_in: {}, offset: {}", amount_in, offset);
     let mut accounts_len: usize = 0;
     let mut stake_wsol_accounts = SanctumStakeWsol::parse_accounts(remaining_accounts, *offset)?;
     accounts_len += STAKE_WRAPPED_SOL_IX_ACCOUNTS_LEN;
@@ -1382,10 +1185,8 @@ pub fn stake_wsol_handler<'a>(
         )?);
         accounts_len += MARINADE_DEPOSIT_SOL_IX_ACCOUNTS_LEN;
     } else {
-        deposit_accounts = Box::new(SplSolDeposit::parse_accounts(
-            remaining_accounts,
-            *offset + accounts_len,
-        )?);
+        deposit_accounts =
+            Box::new(SplSolDeposit::parse_accounts(remaining_accounts, *offset + accounts_len)?);
         accounts_len += SPL_STAKE_POOL_DEPOSIT_SOL_IX_ACCOUNTS_LEN;
     }
 
@@ -1395,7 +1196,6 @@ pub fn stake_wsol_handler<'a>(
         ErrorCode::InvalidProgramId
     );
 
-   
     before_check(
         &stake_wsol_accounts.swap_authority_pubkey,
         &stake_wsol_accounts.src_token_account(),
@@ -1409,17 +1209,20 @@ pub fn stake_wsol_handler<'a>(
     let mut deposit_stake_ix_data = Vec::<u8>::from(&0u8.to_le_bytes()); //stake wsol discriminator
     deposit_stake_ix_data.extend_from_slice(&amount_in.to_le_bytes());
 
-    let deposit_accountmetas: Vec<AccountMeta> = stake_wsol_accounts.get_accountmetas()
+    let deposit_accountmetas: Vec<AccountMeta> = stake_wsol_accounts
+        .get_accountmetas()
         .into_iter()
         .chain(deposit_accounts.get_accountmetas())
         .collect();
 
-    let swap_accounts: Vec<AccountInfo<'a>> = stake_wsol_accounts.get_accountinfos()
+    let swap_accounts: Vec<AccountInfo<'a>> = stake_wsol_accounts
+        .get_accountinfos()
         .into_iter()
         .chain(deposit_accounts.get_accountinfos())
         .collect();
 
-    let (src_token_account_mut, dst_token_account_mut) = stake_wsol_accounts.get_token_accounts_mut();
+    let (src_token_account_mut, dst_token_account_mut) =
+        stake_wsol_accounts.get_token_accounts_mut();
     let dex_processor = &SanctumRouterProcessor;
     invoke_process(
         amount_in,
@@ -1451,11 +1254,7 @@ pub fn prefund_swap_via_stake_handler<'a>(
     order_id: u64,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::SanctumRouterPrefundSwapViaStake amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::SanctumRouterPrefundSwapViaStake amount_in: {}, offset: {}", amount_in, offset);
     require!(order_id > 0, ErrorCode::InvalidBridgeSeed);
 
     let mut accounts_len: usize = 0;
@@ -1483,15 +1282,18 @@ pub fn prefund_swap_via_stake_handler<'a>(
         SanctumDepositStake::parse_accounts(remaining_accounts, *offset + accounts_len)?;
     accounts_len += DEPOSIT_STAKE_IX_ACCOUNTS_LEN;
 
-    let pool_deposit_accounts : Box<dyn StakeDexAccounts<'a>>;
+    let pool_deposit_accounts: Box<dyn StakeDexAccounts<'a>>;
     if deposit_stake_accounts.dest_token_mint.key() == marinade_sol_mint::id() {
-        pool_deposit_accounts = Box::new(MarinadeStakeDeposit::parse_accounts(remaining_accounts, *offset + accounts_len)?);
+        pool_deposit_accounts = Box::new(MarinadeStakeDeposit::parse_accounts(
+            remaining_accounts,
+            *offset + accounts_len,
+        )?);
         accounts_len += MARINADE_DEPOSIT_STAKE_IX_ACCOUNTS_LEN;
-    }else {
-        pool_deposit_accounts = Box::new(SplStakeDeposit::parse_accounts(remaining_accounts, *offset + accounts_len)?);
+    } else {
+        pool_deposit_accounts =
+            Box::new(SplStakeDeposit::parse_accounts(remaining_accounts, *offset + accounts_len)?);
         accounts_len += SPL_STAKEPOOL_DEPOSIT_ACCOUNTS_LEN;
     }
-    
 
     if prefund_withdraw_accounts.dex_program_id().key != &sanctum_router_program::id()
         || deposit_stake_accounts.dex_program_id().key != &sanctum_router_program::id()
@@ -1521,7 +1323,8 @@ pub fn prefund_swap_via_stake_handler<'a>(
     prefund_withdraw_ix_data.extend_from_slice(&amount_in.to_le_bytes()); //amount in
     prefund_withdraw_ix_data.extend_from_slice(&bridge_seed);
 
-    let withdraw_accountmetas: Vec<AccountMeta> = prefund_withdraw_accounts.get_accountmetas()
+    let withdraw_accountmetas: Vec<AccountMeta> = prefund_withdraw_accounts
+        .get_accountmetas()
         .into_iter()
         .chain(withdraw_accounts.get_accountmetas())
         .collect();
@@ -1534,19 +1337,20 @@ pub fn prefund_swap_via_stake_handler<'a>(
         .chain(pool_deposit_accounts.get_accountmetas())
         .collect();
 
-    let withdraw_account_infos: Vec<AccountInfo<'a>> = prefund_withdraw_accounts.get_accountinfos()
+    let withdraw_account_infos: Vec<AccountInfo<'a>> = prefund_withdraw_accounts
+        .get_accountinfos()
         .into_iter()
         .chain(withdraw_accounts.get_accountinfos())
         .collect();
 
-    let deposit_account_infos : Vec<AccountInfo<'a>> =deposit_stake_accounts
+    let deposit_account_infos: Vec<AccountInfo<'a>> = deposit_stake_accounts
         .get_accountinfos()
         .into_iter()
         .chain(pool_deposit_accounts.get_accountinfos())
         .collect();
 
     let dex_processor = &SanctumRouterProcessor;
-    
+
     invoke_processes(
         amount_in,
         dex_processor,
@@ -1584,14 +1388,11 @@ pub fn withdraw_wsol_handler<'a>(
     _order_id: u64,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::SanctumRouterWithdrawWSol amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::SanctumRouterWithdrawWSol amount_in: {}, offset: {}", amount_in, offset);
     let mut accounts_len: usize = 0;
 
-    let mut withdraw_wsol_accounts = SanctumWithdrawWsol::parse_accounts(remaining_accounts, *offset)?;
+    let mut withdraw_wsol_accounts =
+        SanctumWithdrawWsol::parse_accounts(remaining_accounts, *offset)?;
     accounts_len += WITHDRAW_WRAPPED_SOL_IX_ACCOUNTS_LEN;
 
     require_keys_eq!(
@@ -1600,12 +1401,10 @@ pub fn withdraw_wsol_handler<'a>(
         ErrorCode::InvalidProgramId
     );
 
-    let stake_dex_withdraw_accounts: Box<dyn StakeDexAccounts<'a>> = Box::new(SplStakePoolWithdrawSol::parse_accounts(
-        remaining_accounts,
-        *offset + accounts_len,
-    )?);
+    let stake_dex_withdraw_accounts: Box<dyn StakeDexAccounts<'a>> = Box::new(
+        SplStakePoolWithdrawSol::parse_accounts(remaining_accounts, *offset + accounts_len)?,
+    );
     accounts_len += SPL_STAKEPOOL_WITHDRAW_SOL_ACCOUNTS_LEN;
-    
 
     let dst_token_account = withdraw_wsol_accounts.dst_token_account().key();
     before_check(
@@ -1621,31 +1420,33 @@ pub fn withdraw_wsol_handler<'a>(
     let mut ix_data = Vec::<u8>::from(&8u8.to_le_bytes()); //withdraw wsol discriminator
     ix_data.extend_from_slice(&amount_in.to_le_bytes());
 
-    let withdraw_accout_metas: Vec<AccountMeta>   = withdraw_wsol_accounts.get_accountmetas()
+    let withdraw_accout_metas: Vec<AccountMeta> = withdraw_wsol_accounts
+        .get_accountmetas()
         .into_iter()
         .chain(stake_dex_withdraw_accounts.get_accountmetas())
         .collect();
-    let withdraw_accout_infos: Vec<AccountInfo<'a>> = withdraw_wsol_accounts.get_accountinfos()
+    let withdraw_accout_infos: Vec<AccountInfo<'a>> = withdraw_wsol_accounts
+        .get_accountinfos()
         .into_iter()
         .chain(stake_dex_withdraw_accounts.get_accountinfos())
-       .collect();
+        .collect();
 
     let (src_token_account, dst_token_account) = withdraw_wsol_accounts.get_token_accounts_mut();
     invoke_process(
         amount_in,
-        &SanctumRouterProcessor, 
-        &withdraw_accout_infos, 
-        src_token_account, 
-        dst_token_account, 
-        hop_accounts, 
+        &SanctumRouterProcessor,
+        &withdraw_accout_infos,
+        src_token_account,
+        dst_token_account,
+        hop_accounts,
         Instruction {
             program_id: sanctum_router_program::id(),
             accounts: withdraw_accout_metas,
             data: ix_data,
         },
-        hop, 
-        offset, 
-        accounts_len, 
+        hop,
+        offset,
+        accounts_len,
         proxy_swap,
         owner_seeds,
     )
@@ -1653,6 +1454,6 @@ pub fn withdraw_wsol_handler<'a>(
 
 fn get_seed_from_orderid(order_id: u64) -> [u8; 4] {
     let last_4_bytes = (order_id & 0xFFFFFFFF) as u32;
-    let bytes: [u8; 4] = last_4_bytes.to_le_bytes(); 
+    let bytes: [u8; 4] = last_4_bytes.to_le_bytes();
     bytes
 }

@@ -1,7 +1,7 @@
 use super::common::DexProcessor;
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{zerofi_program, HopAccounts};
+use crate::{HopAccounts, zerofi_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token_interface::{TokenAccount, TokenInterface};
 use arrayref::array_ref;
@@ -40,8 +40,8 @@ impl<'info> ZeroFiAccount<'info> {
             vault_info_quote,
             vault_quote,
             token_program,
-            sysvar_instructions
-        ]: & [AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
+            sysvar_instructions,
+        ]: &[AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -68,10 +68,7 @@ pub fn swap<'a>(
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
     msg!("Dex::ZeroFi amount_in: {}, offset: {}", amount_in, offset);
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
 
     let mut swap_accounts = ZeroFiAccount::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &zerofi_program::id() {
@@ -146,11 +143,7 @@ pub fn swap<'a>(
         swap_accounts.sysvar_instructions.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: zerofi_program::id(),
-        accounts,
-        data,
-    };
+    let instruction = Instruction { program_id: zerofi_program::id(), accounts, data };
 
     let amount_out = invoke_process(
         amount_in,

@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{obric_v2_program, HopAccounts, SWAP2_SELECTOR};
+use crate::{HopAccounts, SWAP2_SELECTOR, obric_v2_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::TokenAccount;
@@ -48,20 +48,20 @@ impl<'info> ObricV2Account<'info> {
             x_price_feed,
             y_price_feed,
             token_program,
-        ]: & [AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
         Ok(Self {
-            dex_program_id: dex_program_id,
-            swap_authority_pubkey: swap_authority_pubkey,
+            dex_program_id,
+            swap_authority_pubkey,
             swap_source_token: InterfaceAccount::try_from(swap_source_token)?,
             swap_destination_token: InterfaceAccount::try_from(swap_destination_token)?,
-            trading_pair: trading_pair,
-            second_reference_oracle: second_reference_oracle,
-            third_reference_oracle: third_reference_oracle,
+            trading_pair,
+            second_reference_oracle,
+            third_reference_oracle,
             reserve_x: InterfaceAccount::try_from(reserve_x)?,
             reserve_y: InterfaceAccount::try_from(reserve_y)?,
-            reference_oracle: reference_oracle,
-            x_price_feed: x_price_feed,
-            y_price_feed: y_price_feed,
+            reference_oracle,
+            x_price_feed,
+            y_price_feed,
             token_program: Program::try_from(token_program)?,
         })
     }
@@ -77,10 +77,7 @@ pub fn swap<'a>(
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
     msg!("Dex::Obric v2 amount_in: {}, offset: {}", amount_in, offset);
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
     let mut swap_accounts = ObricV2Account::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &obric_v2_program::id() {
         return Err(ErrorCode::InvalidProgramId.into());
@@ -114,17 +111,11 @@ pub fn swap<'a>(
         == swap_accounts.reserve_x.mint
         && swap_accounts.swap_destination_token.mint == swap_accounts.reserve_y.mint
     {
-        (
-            swap_accounts.swap_source_token.key(),
-            swap_accounts.swap_destination_token.key(),
-        )
+        (swap_accounts.swap_source_token.key(), swap_accounts.swap_destination_token.key())
     } else if swap_accounts.swap_source_token.mint == swap_accounts.reserve_y.mint
         && swap_accounts.swap_destination_token.mint == swap_accounts.reserve_x.mint
     {
-        (
-            swap_accounts.swap_destination_token.key(),
-            swap_accounts.swap_source_token.key(),
-        )
+        (swap_accounts.swap_destination_token.key(), swap_accounts.swap_source_token.key())
     } else {
         return Err(ErrorCode::InvalidTokenMint.into());
     };
@@ -165,11 +156,8 @@ pub fn swap<'a>(
         swap_accounts.token_program.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &ObricV2Processor;
     let amount_out = invoke_process(

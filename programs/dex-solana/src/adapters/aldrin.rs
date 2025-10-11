@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{aldrin_v1_program, aldrin_v2_program, HopAccounts, SWAP_SELECTOR};
+use crate::{HopAccounts, SWAP_SELECTOR, aldrin_v1_program, aldrin_v2_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount};
@@ -70,7 +70,7 @@ impl<'info> AldrinSwapAccountsV1<'info> {
             pool_pc_token_vault,
             pool_fee_account,
             token_program,
-      ]: & [AccountInfo<'info>; V1_ACCOUNTS_LEN] = array_ref![accounts, offset, V1_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; V1_ACCOUNTS_LEN] = array_ref![accounts, offset, V1_ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -102,7 +102,7 @@ impl<'info> AldrinSwapAccountsV2<'info> {
             pool_fee_account,
             pool_curve,
             token_program,
-      ]: & [AccountInfo<'info>; V2_ACCOUNTS_LEN] = array_ref![accounts, offset, V2_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; V2_ACCOUNTS_LEN] = array_ref![accounts, offset, V2_ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -129,11 +129,7 @@ pub fn swap_v1<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::AldrinSwapV1 amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::AldrinSwapV1 amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + V1_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -209,11 +205,8 @@ pub fn swap_v1<'a>(
         swap_accounts.token_program.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &AldrinProcessor;
     let amount_out = invoke_process(
@@ -242,11 +235,7 @@ pub fn swap_v2<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::AldrinSwapV2 amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::AldrinSwapV2 amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + V2_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -324,11 +313,8 @@ pub fn swap_v2<'a>(
         swap_accounts.token_program.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &AldrinProcessor;
     let amount_out = invoke_process(

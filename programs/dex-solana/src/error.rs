@@ -208,8 +208,8 @@ pub enum ErrorCode {
 
     #[msg("Invalid associated token program")]
     InvalidAssociatedTokenProgram,
-  
-   #[msg("SOL receiver must be a system account")]
+
+    #[msg("SOL receiver must be a system account")]
     SolReceiverMustBeSystemAccount,
 
     #[msg("Insufficient balance for transfer")]
@@ -220,6 +220,12 @@ pub enum ErrorCode {
 
     #[msg("Destination must be wSOL when sol_receiver is specified")]
     DestinationMustBeWsolForSolReceiver,
+
+    #[msg("Invalid Goonfi parameters")]
+    InvalidGoonfiParameters,
+
+    #[msg("Invalid trim amount")]
+    InvalidTrimAmount,
 }
 
 #[error_code]

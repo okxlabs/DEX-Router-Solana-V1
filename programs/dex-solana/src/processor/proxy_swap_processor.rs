@@ -40,10 +40,8 @@ impl ProxySwapProcessor {
         destination_token_program: &Option<Interface<'info, TokenInterface>>,
         associated_token_program: &Option<Program<'info, AssociatedToken>>,
         system_program: &Option<Program<'info, System>>,
-    ) -> Result<(
-        InterfaceAccount<'info, TokenAccount>,
-        InterfaceAccount<'info, TokenAccount>,
-    )> {
+    ) -> Result<(InterfaceAccount<'info, TokenAccount>, InterfaceAccount<'info, TokenAccount>)>
+    {
         let source_account = create_sa_if_needed(
             payer,
             source_mint,
@@ -86,16 +84,8 @@ impl ProxySwapProcessor {
         let source_token_program = source_token_program.as_ref().unwrap();
         let source_token_sa_info = source_token_sa.as_ref().unwrap().to_account_info();
         let (acc_owner, acc_mint) = unpack_token_owner_and_mint(&source_token_sa_info)?;
-        require_keys_eq!(
-            acc_owner,
-            authority_pda::ID,
-            ErrorCode::InvalidSourceTokenSa
-        );
-        require_keys_eq!(
-            acc_mint,
-            source_mint.key(),
-            ErrorCode::InvalidSourceTokenSaMint
-        );
+        require_keys_eq!(acc_owner, authority_pda::ID, ErrorCode::InvalidSourceTokenSa);
+        require_keys_eq!(acc_mint, source_mint.key(), ErrorCode::InvalidSourceTokenSaMint);
 
         transfer_token(
             payer.to_account_info(),
@@ -137,11 +127,7 @@ impl ProxySwapProcessor {
             destination_mint.key(),
             ErrorCode::InvalidDestinationTokenSaMint
         );
-        require_keys_eq!(
-            acc_owner,
-            authority_pda::ID,
-            ErrorCode::InvalidSourceTokenSa
-        );
+        require_keys_eq!(acc_owner, authority_pda::ID, ErrorCode::InvalidSourceTokenSa);
 
         transfer_token(
             sa_authority.to_account_info(),
@@ -172,10 +158,8 @@ impl<'info> CommonSwapProcessor<'info> for ProxySwapProcessor {
         destination_token_program: &Option<Interface<'info, TokenInterface>>,
         associated_token_program: &Option<Program<'info, AssociatedToken>>,
         system_program: &Option<Program<'info, System>>,
-    ) -> Result<(
-        InterfaceAccount<'info, TokenAccount>,
-        InterfaceAccount<'info, TokenAccount>,
-    )> {
+    ) -> Result<(InterfaceAccount<'info, TokenAccount>, InterfaceAccount<'info, TokenAccount>)>
+    {
         self.get_swap_accounts(
             payer,
             source_token_account,

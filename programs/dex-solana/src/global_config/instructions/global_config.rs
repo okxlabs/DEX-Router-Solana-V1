@@ -53,10 +53,7 @@ pub fn init_global_config_handler(ctx: Context<InitGlobalConfig>, trade_fee: u64
     global_config.fee_multiplier = 10;
     global_config.padding = [0u8; 127];
     global_config.set_trade_fee(trade_fee)?;
-    emit!(InitGlobalConfigEvent {
-        admin: admin,
-        trade_fee,
-    });
+    emit!(InitGlobalConfigEvent { admin, trade_fee });
     Ok(())
 }
 

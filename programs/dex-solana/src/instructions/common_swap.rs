@@ -7,7 +7,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
-#[derive(AnchorSerialize, AnchorDeserialize, Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(AnchorSerialize, AnchorDeserialize, Copy, Clone, PartialEq, Eq, Debug, strum::Display)]
 pub enum Dex {
     SplTokenSwap,
     StableSwap,
@@ -73,7 +73,17 @@ pub enum Dex {
     PancakeSwapV3Swap,
     PancakeSwapV3SwapV2,
     Tessera,
-    SolRfq,
+    #[strum(to_string = "SolRfq")]
+    SolRfq {
+        rfq_id: u64,
+        expected_maker_amount: u64,
+        expected_taker_amount: u64,
+        maker_send_amount: u64,
+        taker_send_amount: u64,
+        expiry: u64,
+        maker_use_native_sol: bool,
+        taker_use_native_sol: bool,
+    },
     PumpfunBuy2,
     PumpfunammBuy2,
     Humidifi,
@@ -84,6 +94,22 @@ pub enum Dex {
     PumpfunSell3,
     PumpfunammBuy3,
     PumpfunammSell3,
+    Goonfi,
+    MoonitBuy,
+    MoonitSell,
+    RaydiumSwapV2,
+    Swaap,
+    #[strum(to_string = "SugarMoneyBuy")]
+    SugarMoneyBuy {
+        bonding_curve_bump: u8,
+        bonding_curve_sol_associated_account_bump: u8,
+    },
+    #[strum(to_string = "SugarMoneySell")]
+    SugarMoneySell {
+        bonding_curve_bump: u8,
+        bonding_curve_sol_associated_account_bump: u8,
+    },
+    MeteoraDAMMV2Swap2,
 }
 
 #[derive(Debug)]
@@ -109,11 +135,20 @@ pub struct SwapArgs {
 }
 
 #[event]
-#[derive(Debug)]
 pub struct SwapEvent {
     pub dex: Dex,
     pub amount_in: u64,
     pub amount_out: u64,
+}
+
+impl std::fmt::Debug for SwapEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SwapEvent")
+            .field("dex", &format_args!("{}", &self.dex))
+            .field("amount_in", &self.amount_in)
+            .field("amount_out", &self.amount_out)
+            .finish()
+    }
 }
 
 pub fn common_swap<'info, T: CommonSwapProcessor<'info>>(
@@ -249,10 +284,7 @@ pub fn common_swap<'info, T: CommonSwapProcessor<'info>>(
     );
 
     // Check min return
-    require!(
-        destination_token_change >= min_return,
-        ErrorCode::MinReturnNotReached
-    );
+    require!(destination_token_change >= min_return, ErrorCode::MinReturnNotReached);
     Ok(destination_token_change)
 }
 
@@ -273,13 +305,18 @@ pub fn common_swap_v3<'info, T: PlatformFeeV3Processor<'info>>(
     remaining_accounts: &'info [AccountInfo<'info>],
     args: SwapArgs,
     order_id: u64,
+    // COMMISSION
     commission_rate: u32,
     commission_direction: bool,
     commission_account: &Option<AccountInfo<'info>>,
+    // PLATFORM FEE
     platform_fee_rate: Option<u16>,
     platform_fee_account: &Option<AccountInfo<'info>>,
+    // TRIM
     trim_rate: Option<u8>,
+    charge_rate: Option<u16>,
     trim_account: Option<&AccountInfo<'info>>,
+    charge_account: Option<&AccountInfo<'info>>,
     acc_close_flag: bool,
 ) -> Result<u64> {
     log_swap_basic_info(
@@ -372,7 +409,9 @@ pub fn common_swap_v3<'info, T: PlatformFeeV3Processor<'info>>(
         platform_fee_rate,
         platform_fee_account,
         trim_rate,
+        charge_rate,
         trim_account,
+        charge_account,
         acc_close_flag,
     )?;
 
@@ -410,10 +449,7 @@ pub fn common_swap_v3<'info, T: PlatformFeeV3Processor<'info>>(
     );
 
     // Check min return
-    require!(
-        destination_token_change >= min_return,
-        ErrorCode::MinReturnNotReached
-    );
+    require!(destination_token_change >= min_return, ErrorCode::MinReturnNotReached);
     Ok(destination_token_change)
 }
 
@@ -432,31 +468,16 @@ fn execute_swap<'info>(
     let before_destination_balance = destination_account.amount;
 
     // Check SwapArgs
-    let SwapArgs {
-        amount_in: _,
-        min_return,
-        expect_amount_out,
-        amounts,
-        routes,
-    } = &args;
+    let SwapArgs { amount_in: _, min_return, expect_amount_out, amounts, routes } = &args;
     require!(real_amount_in > 0, ErrorCode::AmountInMustBeGreaterThanZero);
     require!(*min_return > 0, ErrorCode::MinReturnMustBeGreaterThanZero);
-    require!(
-        *expect_amount_out >= *min_return,
-        ErrorCode::InvalidExpectAmountOut
-    );
-    require!(
-        amounts.len() == routes.len(),
-        ErrorCode::AmountsAndRoutesMustHaveTheSameLength
-    );
+    require!(*expect_amount_out >= *min_return, ErrorCode::InvalidExpectAmountOut);
+    require!(amounts.len() == routes.len(), ErrorCode::AmountsAndRoutesMustHaveTheSameLength);
 
-    let total_amounts: u64 = amounts.iter().try_fold(0u64, |acc, &x| {
-        acc.checked_add(x).ok_or(ErrorCode::CalculationError)
-    })?;
-    require!(
-        total_amounts == real_amount_in,
-        ErrorCode::TotalAmountsMustBeEqualToAmountIn
-    );
+    let total_amounts: u64 = amounts
+        .iter()
+        .try_fold(0u64, |acc, &x| acc.checked_add(x).ok_or(ErrorCode::CalculationError))?;
+    require!(total_amounts == real_amount_in, ErrorCode::TotalAmountsMustBeEqualToAmountIn);
 
     // Swap by Routes
     let mut offset: usize = 0;
@@ -470,13 +491,10 @@ fn execute_swap<'info>(
         for (hop, route) in hops.iter().enumerate() {
             let dexes = &route.dexes;
             let weights = &route.weights;
-            require!(
-                dexes.len() == weights.len(),
-                ErrorCode::DexesAndWeightsMustHaveTheSameLength
-            );
-            let total_weight: u8 = weights.iter().try_fold(0u8, |acc, &x| {
-                acc.checked_add(x).ok_or(ErrorCode::CalculationError)
-            })?;
+            require!(dexes.len() == weights.len(), ErrorCode::DexesAndWeightsMustHaveTheSameLength);
+            let total_weight: u8 = weights
+                .iter()
+                .try_fold(0u8, |acc, &x| acc.checked_add(x).ok_or(ErrorCode::CalculationError))?;
             require!(total_weight == TOTAL_WEIGHT, ErrorCode::WeightsMustSumTo100);
 
             // Level 2 split handling
@@ -491,18 +509,15 @@ fn execute_swap<'info>(
                 // Calculate 2 level split amount
                 let fork_amount_in = if index == dexes.len() - 1 {
                     // The last dex, use the remaining amount_in for trading to prevent accumulation
-                    amount_in
-                        .checked_sub(acc_fork_in)
-                        .ok_or(ErrorCode::CalculationError)?
+                    amount_in.checked_sub(acc_fork_in).ok_or(ErrorCode::CalculationError)?
                 } else {
                     let temp_amount = amount_in
                         .checked_mul(weights[index] as u64)
                         .ok_or(ErrorCode::CalculationError)?
                         .checked_div(TOTAL_WEIGHT as u64)
                         .ok_or(ErrorCode::CalculationError)?;
-                    acc_fork_in = acc_fork_in
-                        .checked_add(temp_amount)
-                        .ok_or(ErrorCode::CalculationError)?;
+                    acc_fork_in =
+                        acc_fork_in.checked_add(temp_amount).ok_or(ErrorCode::CalculationError)?;
                     temp_amount
                 };
 
@@ -521,19 +536,15 @@ fn execute_swap<'info>(
                 )?;
 
                 // Emit SwapEvent
-                let event = SwapEvent {
-                    dex: *dex,
-                    amount_in: fork_amount_in,
-                    amount_out: fork_amount_out,
-                };
+                let event =
+                    SwapEvent { dex: *dex, amount_in: fork_amount_in, amount_out: fork_amount_out };
                 emit!(event);
                 msg!("{:?}", event);
                 hop_accounts.from_account.log();
                 hop_accounts.to_account.log();
 
-                amount_out = amount_out
-                    .checked_add(fork_amount_out)
-                    .ok_or(ErrorCode::CalculationError)?;
+                amount_out =
+                    amount_out.checked_add(fork_amount_out).ok_or(ErrorCode::CalculationError)?;
             }
 
             if hop == 0 {
@@ -600,18 +611,7 @@ fn distribute_swap<'a>(
         Dex::SanctumNonWsolSwap => sanctum::swap_without_wsol_handler,
         Dex::SanctumWsolSwap => sanctum::swap_with_wsol_handler,
         Dex::PumpfunBuy => pumpfun::buy,
-        Dex::PumpfunSell => {
-            return pumpfun::sell(
-                remaining_accounts,
-                amount_in,
-                offset,
-                hop_accounts,
-                hop,
-                proxy_from,
-                owner_seeds,
-                payer,
-            )
-        },
+        Dex::PumpfunSell => pumpfun::sell,
         Dex::Saros => saros::swap,
         Dex::StabbleSwap => stabble::swap,
         Dex::SanctumRouter => {
@@ -633,18 +633,7 @@ fn distribute_swap<'a>(
         Dex::QualiaSwap => qualia::swap,
         Dex::Zerofi => zerofi::swap,
         Dex::PumpfunammBuy => pumpfunamm::buy,
-        Dex::PumpfunammSell => {
-            return pumpfunamm::sell(
-                remaining_accounts,
-                amount_in,
-                offset,
-                hop_accounts,
-                hop,
-                proxy_from,
-                owner_seeds,
-                payer,
-            )
-        },
+        Dex::PumpfunammSell => pumpfunamm::sell,
         Dex::Virtuals => virtuals::swap,
         Dex::VertigoBuy => vertigo::buy,
         Dex::VertigoSell => vertigo::sell,
@@ -669,15 +658,38 @@ fn distribute_swap<'a>(
                 hop,
                 proxy_from,
                 false,
-                owner_seeds, 
+                owner_seeds,
             );
         }
         Dex::PerpetualsSwap => perpetuals::perpetuals_swap_handler,
-        Dex::RaydiumLaunchpad | Dex::LetsBonkFun => raydium_launchpad::launchpad_handler,
+        Dex::RaydiumLaunchpad => {
+            return raydium_launchpad::launchpad_handler(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                "RaydiumLaunchpad",
+            );
+        }
+        Dex::LetsBonkFun => {
+            return raydium_launchpad::launchpad_handler(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                "LetsBonkFun",
+            );
+        }
         Dex::Woofi => woofi::swap,
         Dex::MeteoraDbc => meteora_dbc::swap,
         Dex::MeteoraDlmmSwap2 => meteora::dlmm_swap2,
-        Dex::MeteoraDAMMV2 => meteora::swap_v2_damm,
+        Dex::MeteoraDAMMV2 => meteora::damm_v2_swap,
         Dex::Gavel => gavel::swap,
         Dex::BoopfunBuy => {
             return boopfun::buy(
@@ -689,8 +701,8 @@ fn distribute_swap<'a>(
                 proxy_from,
                 owner_seeds,
                 payer,
-            )
-        },
+            );
+        }
         Dex::BoopfunSell => boopfun::sell,
         Dex::MeteoraDbc2 => meteora_dbc::swap2,
         Dex::GooseFX => goosefx::swap,
@@ -705,9 +717,17 @@ fn distribute_swap<'a>(
         Dex::PancakeSwapV3Swap => pancake_swap_v3::swap,
         Dex::PancakeSwapV3SwapV2 => pancake_swap_v3::swap_v2,
         Dex::Tessera => tessera::swap,
-        Dex::SolRfq => sol_rfq::fill_order,
-        Dex::PumpfunBuy2 => {
-            return pumpfun::buy2(
+        Dex::SolRfq {
+            rfq_id,
+            expected_maker_amount,
+            expected_taker_amount,
+            maker_send_amount,
+            taker_send_amount,
+            expiry,
+            maker_use_native_sol,
+            taker_use_native_sol,
+        } => {
+            return sol_rfq::fill_order(
                 remaining_accounts,
                 amount_in,
                 offset,
@@ -715,9 +735,17 @@ fn distribute_swap<'a>(
                 hop,
                 proxy_from,
                 owner_seeds,
-                payer,
-            )
-        },
+                *rfq_id,
+                *expected_maker_amount,
+                *expected_taker_amount,
+                *maker_send_amount,
+                *taker_send_amount,
+                *expiry,
+                *maker_use_native_sol,
+                *taker_use_native_sol,
+            );
+        }
+        Dex::PumpfunBuy2 => pumpfun::buy2,
         Dex::PumpfunammBuy2 => pumpfunamm::buy2,
         Dex::Humidifi => humidifi::swap,
         Dex::HeavenBuy => heaven::buy,
@@ -733,8 +761,8 @@ fn distribute_swap<'a>(
                 proxy_from,
                 owner_seeds,
                 payer,
-            )
-        },
+            );
+        }
         Dex::PumpfunSell3 => {
             return pumpfun::sell3(
                 remaining_accounts,
@@ -745,8 +773,8 @@ fn distribute_swap<'a>(
                 proxy_from,
                 owner_seeds,
                 payer,
-            )
-        },
+            );
+        }
         Dex::PumpfunammBuy3 => pumpfunamm::buy3,
         Dex::PumpfunammSell3 => {
             return pumpfunamm::sell3(
@@ -758,16 +786,52 @@ fn distribute_swap<'a>(
                 proxy_from,
                 owner_seeds,
                 payer,
-            )
-        },
+            );
+        }
+        Dex::Goonfi => goonfi::swap,
+        Dex::MoonitBuy => {
+            return moonit::buy(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                payer,
+            );
+        }
+        Dex::MoonitSell => moonit::sell,
+        Dex::RaydiumSwapV2 => raydium::swap_v2,
+        Dex::Swaap => swaap::swap,
+        Dex::SugarMoneyBuy { bonding_curve_bump, bonding_curve_sol_associated_account_bump } => {
+            return sugar_money::buy(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                payer,
+                *bonding_curve_bump,
+                *bonding_curve_sol_associated_account_bump,
+            );
+        }
+        Dex::SugarMoneySell { bonding_curve_bump, bonding_curve_sol_associated_account_bump } => {
+            return sugar_money::sell(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                *bonding_curve_bump,
+                *bonding_curve_sol_associated_account_bump,
+            );
+        }
+        Dex::MeteoraDAMMV2Swap2 => meteora::damm_v2_swap2,
     };
-    swap_function(
-        remaining_accounts,
-        amount_in,
-        offset,
-        hop_accounts,
-        hop,
-        proxy_from,
-        owner_seeds,
-    )
+    swap_function(remaining_accounts, amount_in, offset, hop_accounts, hop, proxy_from, owner_seeds)
 }

@@ -2,7 +2,7 @@ use std::vec;
 
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{dooar_program, HopAccounts};
+use crate::{HopAccounts, dooar_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token_interface::TokenAccount;
 use arrayref::array_ref;
@@ -80,10 +80,7 @@ pub fn swap<'a>(
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
     msg!("Dex::Dooar amount_in: {}, offset: {}", amount_in, offset);
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
     let mut swap_accounts = DooarAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &dooar_program::id() {
         return Err(ErrorCode::InvalidProgramId.into());
@@ -134,11 +131,7 @@ pub fn swap<'a>(
     data[1..9].copy_from_slice(&amount_in.to_le_bytes());
     data[9..17].copy_from_slice(&1u64.to_le_bytes());
 
-    let instruction = Instruction {
-        program_id: *swap_accounts.dex_program_id.key,
-        accounts,
-        data,
-    };
+    let instruction = Instruction { program_id: *swap_accounts.dex_program_id.key, accounts, data };
 
     let dex_processor = DooarProcessor {};
     let amount_out = invoke_process(

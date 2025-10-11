@@ -18,6 +18,10 @@ pub use limitorder::instructions as limitorder_instructions;
 pub use limitorder::instructions::*;
 pub use processor::*;
 
+#[cfg(feature = "staging")]
+declare_id!("preZmu827KVPCoQ4LYwSoec13x6seQrKA3QpjgDtx1R");
+
+#[cfg(not(feature = "staging"))]
 declare_id!("6m2CDdhRgxpH4WjvdzxAYbGxwdGUz5MziiL5jek2kBma");
 
 #[program]
@@ -30,16 +34,6 @@ pub mod dex_solana {
         order_id: u64,
     ) -> Result<()> {
         instructions::swap_handler(ctx, data, order_id)
-    }
-
-    pub fn from_swap_log<'a>(
-        ctx: Context<'_, '_, 'a, 'a, FromSwapAccounts<'a>>,
-        args: SwapArgs,
-        bridge_to_args: BridgeToArgs,
-        offset: u8,
-        len: u8,
-    ) -> Result<()> {
-        instructions::from_swap_log_handler(ctx, args, bridge_to_args, offset, len)
     }
 
     // ******************** Commission Swap ******************** //
@@ -65,42 +59,6 @@ pub mod dex_solana {
         order_id: u64,
     ) -> Result<()> {
         instructions::commission_wrap_unwrap_handler(ctx, data, order_id)
-    }
-
-    pub fn commission_sol_from_swap<'a>(
-        ctx: Context<'_, '_, 'a, 'a, CommissionSOLFromSwapAccounts<'a>>,
-        args: SwapArgs,
-        commission_rate: u16,
-        bridge_to_args: BridgeToArgs,
-        offset: u8,
-        len: u8,
-    ) -> Result<()> {
-        instructions::commission_sol_from_swap_handler(
-            ctx,
-            args,
-            commission_rate,
-            bridge_to_args,
-            offset,
-            len,
-        )
-    }
-
-    pub fn commission_spl_from_swap<'a>(
-        ctx: Context<'_, '_, 'a, 'a, CommissionSPLFromSwapAccounts<'a>>,
-        args: SwapArgs,
-        commission_rate: u16,
-        bridge_to_args: BridgeToArgs,
-        offset: u8,
-        len: u8,
-    ) -> Result<()> {
-        instructions::commission_spl_from_swap_handler(
-            ctx,
-            args,
-            commission_rate,
-            bridge_to_args,
-            offset,
-            len,
-        )
     }
 
     // ******************** Proxy Swap ******************** //
@@ -245,6 +203,26 @@ pub mod dex_solana {
         )
     }
 
+    pub fn swap_tob_v3_enhanced<'a>(
+        ctx: Context<'_, '_, 'a, 'a, CommissionProxySwapAccountsV3<'a>>,
+        args: SwapArgs,
+        commission_info: u32,
+        trim_rate: u8,
+        charge_rate: u16,
+        platform_fee_rate: u16,
+        order_id: u64,
+    ) -> Result<()> {
+        instructions::swap_tob_enhanced_handler(
+            ctx,
+            args,
+            commission_info,
+            order_id,
+            trim_rate,
+            charge_rate,
+            Some(platform_fee_rate),
+        )
+    }
+
     pub fn wrap_unwrap_v3<'a>(
         ctx: Context<'_, '_, 'a, 'a, PlatformFeeWrapUnwrapAccounts<'a>>,
         args: PlatformFeeWrapUnwrapArgs,
@@ -252,111 +230,23 @@ pub mod dex_solana {
         instructions::platform_fee_wrap_unwrap_handler_v3(ctx, args)
     }
 
+    pub fn create_token_account<'a>(
+        ctx: Context<'_, '_, 'a, 'a, CreateTokenAccountAccounts<'a>>,
+        bump: u8,
+    ) -> Result<()> {
+        instructions::create_token_account_handler(ctx, bump)
+    }
+
+    pub fn create_token_account_with_seed<'a>(
+        ctx: Context<'_, '_, 'a, 'a, CreateTokenAccountWithSeedAccounts<'a>>,
+        bump: u8,
+        seed: u32,
+    ) -> Result<()> {
+        instructions::create_token_account_with_seed_handler(ctx, bump, seed)
+    }
+
     // ******************** Claim ******************** //
-    pub fn claim<'a>(
-        ctx: Context<'_, '_, 'a, 'a, ClaimAccounts<'a>>,
-    ) -> Result<()> {
+    pub fn claim<'a>(ctx: Context<'_, '_, 'a, 'a, ClaimAccounts<'a>>) -> Result<()> {
         instructions::claim_handler(ctx)
-    }
-
-    // ******************** Global Config ******************** //
-    pub fn init_global_config(ctx: Context<InitGlobalConfig>, trade_fee: u64) -> Result<()> {
-        global_config_instructions::init_global_config_handler(ctx, trade_fee)
-    }
-
-    pub fn set_admin(ctx: Context<UpdateGlobalConfig>, admin: Pubkey) -> Result<()> {
-        global_config_instructions::set_admin_handler(ctx, admin)
-    }
-
-    pub fn add_resolver(ctx: Context<UpdateGlobalConfig>, resolver: Pubkey) -> Result<()> {
-        global_config_instructions::add_resolver_handler(ctx, resolver)
-    }
-
-    pub fn remove_resolver(ctx: Context<UpdateGlobalConfig>, resolver: Pubkey) -> Result<()> {
-        global_config_instructions::remove_resolver_handler(ctx, resolver)
-    }
-
-    pub fn set_trade_fee(ctx: Context<UpdateGlobalConfig>, trade_fee: u64) -> Result<()> {
-        global_config_instructions::set_trade_fee_handler(ctx, trade_fee)
-    }
-
-    pub fn pause(ctx: Context<UpdateGlobalConfig>) -> Result<()> {
-        global_config_instructions::pause_trading_handler(ctx)
-    }
-
-    pub fn unpause(ctx: Context<UpdateGlobalConfig>) -> Result<()> {
-        global_config_instructions::unpause_trading_handler(ctx)
-    }
-
-    pub fn set_fee_multiplier(ctx: Context<UpdateGlobalConfig>, fee_multiplier: u8) -> Result<()> {
-        global_config_instructions::set_fee_multiplier_handler(ctx, fee_multiplier)
-    }
-
-    // ******************** Limit Order ******************** //
-    pub fn place_order(
-        ctx: Context<PlaceOrder>,
-        order_id: u64,
-        making_amount: u64,
-        expect_taking_amount: u64,
-        min_return_amount: u64,
-        deadline: u64,
-        trade_fee: u64,
-    ) -> Result<()> {
-        limitorder_instructions::place_order_handler(
-            ctx,
-            order_id,
-            making_amount,
-            expect_taking_amount,
-            min_return_amount,
-            deadline,
-            trade_fee,
-        )
-    }
-
-    pub fn update_order(
-        ctx: Context<UpdateOrder>,
-        order_id: u64,
-        expect_taking_amount: u64,
-        min_return_amount: u64,
-        deadline: u64,
-        increase_fee: u64,
-    ) -> Result<()> {
-        limitorder_instructions::update_order_handler(
-            ctx,
-            order_id,
-            expect_taking_amount,
-            min_return_amount,
-            deadline,
-            increase_fee,
-        )
-    }
-
-    pub fn cancel_order(ctx: Context<CancelOrder>, order_id: u64, tips: u64) -> Result<()> {
-        limitorder_instructions::cancel_order_handler(ctx, order_id, tips)
-    }
-
-    pub fn fill_order_by_resolver<'a>(
-        ctx: Context<'_, '_, 'a, 'a, FillOrder<'a>>,
-        order_id: u64,
-        tips: u64,
-        args: SwapArgs,
-    ) -> Result<()> {
-        limitorder_instructions::fill_order_by_resolver_handler(ctx, order_id, tips, args)
-    }
-
-    pub fn commission_fill_order<'a>(
-        ctx: Context<'_, '_, 'a, 'a, CommissionFillOrder<'a>>,
-        order_id: u64,
-        tips: u64,
-        args: SwapArgs,
-        commission_info: u32,
-    ) -> Result<()> {
-        limitorder_instructions::commission_fill_order_handler(
-            ctx,
-            order_id,
-            tips,
-            args,
-            commission_info,
-        )
     }
 }

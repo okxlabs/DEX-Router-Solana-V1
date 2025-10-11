@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{sanctum_program, wsol_program, HopAccounts};
+use crate::{HopAccounts, sanctum_program, wsol_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount};
@@ -230,7 +230,8 @@ impl<'info> SanctumAddLiqAccounts<'info> {
                     pool_reserves,
                     wsol_calculator,
                     sanctum_flat_fee_pricing,
-                ]: & [AccountInfo<'info>; ADD_WSOL_LIQ_ACCOUNTS_LEN] = array_ref![accounts, offset, ADD_WSOL_LIQ_ACCOUNTS_LEN];
+                ]: &[AccountInfo<'info>; ADD_WSOL_LIQ_ACCOUNTS_LEN] =
+                    array_ref![accounts, offset, ADD_WSOL_LIQ_ACCOUNTS_LEN];
                 Ok(SanctumAddLiqAccounts::WSOL(SanctumAddWsolLiqAccounts {
                     dex_program_id,
                     swap_authority_pubkey,
@@ -275,7 +276,8 @@ impl<'info> SanctumAddLiqAccounts<'info> {
                     validator_pool_program,
                     validator_pool_program_data,
                     sanctum_flat_fee_pricing,
-                ]: & [AccountInfo<'info>; ADD_LST_LIQ_ACCOUNTS_LEN] = array_ref![accounts, offset, ADD_LST_LIQ_ACCOUNTS_LEN];
+                ]: &[AccountInfo<'info>; ADD_LST_LIQ_ACCOUNTS_LEN] =
+                    array_ref![accounts, offset, ADD_LST_LIQ_ACCOUNTS_LEN];
                 Ok(SanctumAddLiqAccounts::LST(SanctumAddLstLiqAccounts {
                     dex_program_id,
                     swap_authority_pubkey,
@@ -330,28 +332,27 @@ impl<'info> SanctumRemoveLiqAccounts<'info> {
                     wsol_calculator,
                     sanctum_flat_fee_pricing,
                     sanctum_flat_fee_pricing_account,
-                ] : & [AccountInfo<'info>; REMOVE_WSOL_LIQ_ACCOUNTS_LEN] = array_ref![accounts, offset, REMOVE_WSOL_LIQ_ACCOUNTS_LEN];
-                Ok(SanctumRemoveLiqAccounts::WSOL(
-                    SanctumRemoveWsolLiqAccounts {
-                        dex_program_id,
-                        swap_authority_pubkey,
-                        lst_mint: Box::new(InterfaceAccount::try_from(lst_mint)?),
-                        dst_lst_acc: Box::new(InterfaceAccount::try_from(dst_lst_acc)?),
-                        source_lp_acc: Box::new(InterfaceAccount::try_from(source_lp_acc)?),
-                        lp_token_mint: Box::new(InterfaceAccount::try_from(lp_token_mint)?),
-                        protocol_fee_accumulator: Box::new(InterfaceAccount::try_from(
-                            protocol_fee_accumulator,
-                        )?),
-                        lst_token_program: Program::try_from(lst_token_program)?,
-                        lp_token_program: Program::try_from(lp_token_program)?,
-                        pool_state,
-                        lst_states_list,
-                        pool_reserves,
-                        wsol_calculator,
-                        sanctum_flat_fee_pricing,
-                        sanctum_flat_fee_pricing_account,
-                    },
-                ))
+                ]: &[AccountInfo<'info>; REMOVE_WSOL_LIQ_ACCOUNTS_LEN] =
+                    array_ref![accounts, offset, REMOVE_WSOL_LIQ_ACCOUNTS_LEN];
+                Ok(SanctumRemoveLiqAccounts::WSOL(SanctumRemoveWsolLiqAccounts {
+                    dex_program_id,
+                    swap_authority_pubkey,
+                    lst_mint: Box::new(InterfaceAccount::try_from(lst_mint)?),
+                    dst_lst_acc: Box::new(InterfaceAccount::try_from(dst_lst_acc)?),
+                    source_lp_acc: Box::new(InterfaceAccount::try_from(source_lp_acc)?),
+                    lp_token_mint: Box::new(InterfaceAccount::try_from(lp_token_mint)?),
+                    protocol_fee_accumulator: Box::new(InterfaceAccount::try_from(
+                        protocol_fee_accumulator,
+                    )?),
+                    lst_token_program: Program::try_from(lst_token_program)?,
+                    lp_token_program: Program::try_from(lp_token_program)?,
+                    pool_state,
+                    lst_states_list,
+                    pool_reserves,
+                    wsol_calculator,
+                    sanctum_flat_fee_pricing,
+                    sanctum_flat_fee_pricing_account,
+                }))
             }
             false => {
                 require!(
@@ -379,7 +380,8 @@ impl<'info> SanctumRemoveLiqAccounts<'info> {
                     validator_pool_program_data,
                     sanctum_flat_fee_pricing,
                     sanctum_flat_fee_pricing_account,
-                ] : & [AccountInfo<'info>; REMOVE_LST_LIQ_ACCOUNTS_LEN] = array_ref![accounts, offset, REMOVE_LST_LIQ_ACCOUNTS_LEN];
+                ]: &[AccountInfo<'info>; REMOVE_LST_LIQ_ACCOUNTS_LEN] =
+                    array_ref![accounts, offset, REMOVE_LST_LIQ_ACCOUNTS_LEN];
                 Ok(SanctumRemoveLiqAccounts::LST(SanctumRemoveLstLiqAccounts {
                     dex_program_id,
                     swap_authority_pubkey,
@@ -434,23 +436,21 @@ impl<'info> SanctumSwapAccounts<'info> {
                     lst_states_list,
                     source_pool_reserves,
                     dst_pool_reserves,
-
                     src_spl_sol_calculator,
                     src_calculator_state,
                     src_staked_pool_state,
                     src_validator_pool_program,
                     src_validator_pool_program_data,
-
                     dst_spl_sol_calculator,
                     dst_calculator_state,
                     dst_staked_pool_state,
                     dst_validator_pool_program,
                     dst_validator_pool_program_data,
-
                     sanctum_flat_fee_pricing,
                     sanctum_src_flat_fee_pricing_account,
                     sanctum_dst_flat_fee_pricing_account,
-                ] : & [AccountInfo<'info>; SWAP_LST_LST_ACCOUNTS_LEN] = array_ref![accounts, offset, SWAP_LST_LST_ACCOUNTS_LEN];
+                ]: &[AccountInfo<'info>; SWAP_LST_LST_ACCOUNTS_LEN] =
+                    array_ref![accounts, offset, SWAP_LST_LST_ACCOUNTS_LEN];
                 Ok(SanctumSwapAccounts::LstLst(SanctumLstLstSwapAccounts {
                     dex_program_id,
                     swap_authority_pubkey,
@@ -512,7 +512,8 @@ impl<'info> SanctumSwapAccounts<'info> {
                     sanctum_flat_fee_pricing,
                     sanctum_src_flat_fee_pricing_account,
                     sanctum_dst_flat_fee_pricing_account,
-                ] : & [AccountInfo<'info>; SWAP_LST_SOL_ACCOUNTS_LEN] = array_ref![accounts, offset, SWAP_LST_SOL_ACCOUNTS_LEN];
+                ]: &[AccountInfo<'info>; SWAP_LST_SOL_ACCOUNTS_LEN] =
+                    array_ref![accounts, offset, SWAP_LST_SOL_ACCOUNTS_LEN];
                 Ok(SanctumSwapAccounts::WsolLst(SanctumWsolLstSwapAccounts {
                     dex_program_id,
                     swap_authority_pubkey,
@@ -570,7 +571,8 @@ impl<'info> SanctumSwapAccounts<'info> {
                     sanctum_flat_fee_pricing,
                     sanctum_src_flat_fee_pricing_account,
                     sanctum_dst_flat_fee_pricing_account,
-                ] : & [AccountInfo<'info>; SWAP_LST_SOL_ACCOUNTS_LEN] = array_ref![accounts, offset, SWAP_LST_SOL_ACCOUNTS_LEN];
+                ]: &[AccountInfo<'info>; SWAP_LST_SOL_ACCOUNTS_LEN] =
+                    array_ref![accounts, offset, SWAP_LST_SOL_ACCOUNTS_LEN];
                 Ok(SanctumSwapAccounts::LstWsol(SanctumLstWsolSwapAccounts {
                     dex_program_id,
                     swap_authority_pubkey,
@@ -614,11 +616,7 @@ pub fn add_liquidity_handler<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::SanctumAddLiq amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::SanctumAddLiq amount_in: {}, offset: {}", amount_in, offset);
     //account length check moved inside of parse method
     let swap_accounts = SanctumAddLiqAccounts::parse_accounts(remaining_accounts, *offset)?;
 
@@ -649,11 +647,7 @@ pub fn add_liquidity_handler<'a>(
                 source_token_account,
                 dst_token_account,
                 hop_accounts,
-                Instruction {
-                    program_id: sanctum_program::id(),
-                    accounts,
-                    data: ix_data,
-                },
+                Instruction { program_id: sanctum_program::id(), accounts, data: ix_data },
                 hop,
                 offset,
                 ADD_WSOL_LIQ_ACCOUNTS_LEN,
@@ -687,11 +681,7 @@ pub fn add_liquidity_handler<'a>(
                 source_token_account,
                 dst_token_account,
                 hop_accounts,
-                Instruction {
-                    program_id: sanctum_program::id(),
-                    accounts,
-                    data: ix_data,
-                },
+                Instruction { program_id: sanctum_program::id(), accounts, data: ix_data },
                 hop,
                 offset,
                 ADD_LST_LIQ_ACCOUNTS_LEN,
@@ -713,11 +703,7 @@ pub fn remove_liquidity_handler<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::SanctumRemoveLiq amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::SanctumRemoveLiq amount_in: {}, offset: {}", amount_in, offset);
     //account length check moved inside of parse method
     let swap_accounts = SanctumRemoveLiqAccounts::parse_accounts(remaining_accounts, *offset)?;
 
@@ -749,11 +735,7 @@ pub fn remove_liquidity_handler<'a>(
                 source_token_account,
                 dst_token_account,
                 hop_accounts,
-                Instruction {
-                    program_id: sanctum_program::id(),
-                    accounts,
-                    data: ix_data,
-                },
+                Instruction { program_id: sanctum_program::id(), accounts, data: ix_data },
                 hop,
                 offset,
                 REMOVE_WSOL_LIQ_ACCOUNTS_LEN,
@@ -787,11 +769,7 @@ pub fn remove_liquidity_handler<'a>(
                 source_token_account,
                 dst_token_account,
                 hop_accounts,
-                Instruction {
-                    program_id: sanctum_program::id(),
-                    accounts,
-                    data: ix_data,
-                },
+                Instruction { program_id: sanctum_program::id(), accounts, data: ix_data },
                 hop,
                 offset,
                 REMOVE_LST_LIQ_ACCOUNTS_LEN,
@@ -812,11 +790,7 @@ pub fn swap_with_wsol_handler<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::SanctumSwapWithWsol amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::SanctumSwapWithWsol amount_in: {}, offset: {}", amount_in, offset);
     //account length check moved inside of parse method
     let swap_accounts = SanctumSwapAccounts::parse_accounts(remaining_accounts, *offset)?;
 
@@ -855,11 +829,7 @@ pub fn swap_without_wsol_handler<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::SanctumSwapWithoutWsol amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::SanctumSwapWithoutWsol amount_in: {}, offset: {}", amount_in, offset);
 
     //account length check moved inside of parse method
     let swap_accounts = SanctumSwapAccounts::parse_accounts(remaining_accounts, *offset)?;
@@ -1453,15 +1423,11 @@ fn handle_lst_lst_swap<'info>(
     swap_accounts.pool_state.key().log();
     handle_prechecks(swap_accounts, hop_accounts, hop, proxy_swap, owner_seeds)?;
 
-    let src_lst_index = try_get_lst_index(
-        swap_accounts.source_lst_mint.key(),
-        &swap_accounts.lst_states_list,
-    )?;
+    let src_lst_index =
+        try_get_lst_index(swap_accounts.source_lst_mint.key(), &swap_accounts.lst_states_list)?;
 
-    let dst_lst_index = try_get_lst_index(
-        swap_accounts.dst_lst_mint.key(),
-        &swap_accounts.lst_states_list,
-    )?;
+    let dst_lst_index =
+        try_get_lst_index(swap_accounts.dst_lst_mint.key(), &swap_accounts.lst_states_list)?;
 
     let mut ix_data = Vec::with_capacity(SWAP_EXACT_IN_ARGS_LEN);
     ix_data.extend_from_slice(&1u8.to_le_bytes()); //discriminant
@@ -1484,11 +1450,7 @@ fn handle_lst_lst_swap<'info>(
         source_token_account,
         dst_token_account,
         hop_accounts,
-        Instruction {
-            program_id: sanctum_program::id(),
-            accounts,
-            data: ix_data,
-        },
+        Instruction { program_id: sanctum_program::id(), accounts, data: ix_data },
         hop,
         offset,
         SWAP_LST_LST_ACCOUNTS_LEN,
@@ -1511,10 +1473,8 @@ fn handle_wsol_lst_swap<'info>(
     swap_accounts.pool_state.key().log();
     handle_prechecks(swap_accounts, hop_accounts, hop, proxy_swap, owner_seeds)?;
 
-    let lst_index = try_get_lst_index(
-        swap_accounts.dst_lst_mint.key(),
-        &swap_accounts.lst_states_list,
-    )?;
+    let lst_index =
+        try_get_lst_index(swap_accounts.dst_lst_mint.key(), &swap_accounts.lst_states_list)?;
 
     let mut ix_data = Vec::with_capacity(SWAP_EXACT_IN_ARGS_LEN);
     ix_data.extend_from_slice(&1u8.to_le_bytes()); //discriminant
@@ -1537,11 +1497,7 @@ fn handle_wsol_lst_swap<'info>(
         source_token_account,
         dst_token_account,
         hop_accounts,
-        Instruction {
-            program_id: sanctum_program::id(),
-            accounts,
-            data: ix_data,
-        },
+        Instruction { program_id: sanctum_program::id(), accounts, data: ix_data },
         hop,
         offset,
         SWAP_LST_SOL_ACCOUNTS_LEN,
@@ -1564,10 +1520,8 @@ fn handle_lst_wsol_swap<'info>(
     swap_accounts.pool_state.key().log();
     handle_prechecks(swap_accounts, hop_accounts, hop, proxy_swap, owner_seeds)?;
 
-    let lst_index = try_get_lst_index(
-        swap_accounts.source_lst_mint.key(),
-        &swap_accounts.lst_states_list,
-    )?;
+    let lst_index =
+        try_get_lst_index(swap_accounts.source_lst_mint.key(), &swap_accounts.lst_states_list)?;
 
     let mut ix_data = Vec::with_capacity(SWAP_EXACT_IN_ARGS_LEN);
     ix_data.extend_from_slice(&1u8.to_le_bytes()); //discriminant
@@ -1590,11 +1544,7 @@ fn handle_lst_wsol_swap<'info>(
         source_token_account,
         dst_token_account,
         hop_accounts,
-        Instruction {
-            program_id: sanctum_program::id(),
-            accounts,
-            data: ix_data,
-        },
+        Instruction { program_id: sanctum_program::id(), accounts, data: ix_data },
         hop,
         offset,
         SWAP_LST_SOL_ACCOUNTS_LEN,

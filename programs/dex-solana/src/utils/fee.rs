@@ -14,9 +14,7 @@ pub fn collect_fees<'a>(
     escrow_min_rent: u64,
 ) -> Result<()> {
     let priority_fee = compute_fees(instruction_sysvar_account_info)?;
-    let mut fees = priority_fee
-        .checked_add(tips)
-        .ok_or(LimitOrderError::MathOverflow)?;
+    let mut fees = priority_fee.checked_add(tips).ok_or(LimitOrderError::MathOverflow)?;
     if fees == 0 {
         return Ok(());
     }
@@ -101,10 +99,7 @@ pub fn calculate_fee_amounts(
     if commission_rate == 0 {
         return Ok((0, 0));
     }
-    require!(
-        commission_rate <= COMMISSION_RATE_LIMIT_V2,
-        ErrorCode::InvalidCommissionRate
-    );
+    require!(commission_rate <= COMMISSION_RATE_LIMIT_V2, ErrorCode::InvalidCommissionRate);
 
     let commission_amount = if commission_direction {
         u64::try_from(
@@ -143,15 +138,11 @@ pub fn calculate_fee_amounts(
     } else {
         0
     };
-    require!(
-        platform_fee_amount <= commission_amount,
-        ErrorCode::InvalidPlatformFeeAmount
-    );
+    require!(platform_fee_amount <= commission_amount, ErrorCode::InvalidPlatformFeeAmount);
 
     // commission_amount - platform_fee_amount
-    let commission_amount = commission_amount
-        .checked_sub(platform_fee_amount)
-        .ok_or(ErrorCode::CalculationError)?;
+    let commission_amount =
+        commission_amount.checked_sub(platform_fee_amount).ok_or(ErrorCode::CalculationError)?;
 
     Ok((commission_amount, platform_fee_amount))
 }
@@ -164,9 +155,10 @@ pub fn calculate_trim_amount(
     platform_fee_amount: u64,
     commission_direction: bool,
     trim_rate: Option<u8>,
-) -> Result<u64> {
+    charge_rate: Option<u16>,
+) -> Result<(u64, u64)> {
     if trim_rate.is_none() || trim_rate.unwrap() == 0 {
-        return Ok(0);
+        return Ok((0, 0));
     }
     let trim_rate = trim_rate.unwrap();
     require!(trim_rate <= TRIM_RATE_LIMIT_V2, ErrorCode::InvalidTrimRate);
@@ -187,7 +179,21 @@ pub fn calculate_trim_amount(
             .saturating_sub(expected_amount_out))
         .min(trim_limit)
     };
-    Ok(trim_amount)
+
+    if charge_rate.is_some() && charge_rate.unwrap() > 0 {
+        let charge_rate = charge_rate.unwrap();
+        require!(charge_rate <= TRIM_DENOMINATOR_V2, ErrorCode::InvalidTrimRate);
+
+        let charge_amount = u64::try_from(
+            u128::from(trim_amount)
+                .saturating_mul(charge_rate as u128)
+                .saturating_div(TRIM_DENOMINATOR_V2 as u128),
+        )
+        .unwrap();
+        return Ok((trim_amount.saturating_sub(charge_amount), charge_amount));
+    } else {
+        return Ok((trim_amount, 0));
+    }
 }
 
 pub fn transfer_token_fee<'a>(
@@ -203,10 +209,7 @@ pub fn transfer_token_fee<'a>(
         return Ok(());
     }
     let fee_to_token_account = associate_convert_token_account(fee_account)?;
-    require!(
-        fee_to_token_account.mint == token_mint.key(),
-        ErrorCode::InvalidFeeTokenAccount
-    );
+    require!(fee_to_token_account.mint == token_mint.key(), ErrorCode::InvalidFeeTokenAccount);
     transfer_token(
         authority.to_account_info(),
         token_account.to_account_info(),
@@ -228,16 +231,12 @@ pub fn transfer_sol_fee<'a>(
     if fee_amount == 0 {
         return Ok(0);
     }
-    require!(
-        fee_account.owner == &anchor_lang::system_program::ID,
-        ErrorCode::InvalidFeeAccount
-    );
+    require!(fee_account.owner == &anchor_lang::system_program::ID, ErrorCode::InvalidFeeAccount);
 
     let actual_fee_amount = if authority.key() != authority_pda::id() {
         let before_sol_balance = fee_account.lamports();
-        let after_sol_balance = before_sol_balance
-            .checked_add(fee_amount)
-            .ok_or(ErrorCode::CalculationError)?;
+        let after_sol_balance =
+            before_sol_balance.checked_add(fee_amount).ok_or(ErrorCode::CalculationError)?;
         if after_sol_balance < MIN_SOL_ACCOUNT_RENT {
             MIN_SOL_ACCOUNT_RENT
                 .checked_sub(before_sol_balance)

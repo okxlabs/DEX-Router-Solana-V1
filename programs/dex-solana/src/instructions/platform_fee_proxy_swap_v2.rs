@@ -1,12 +1,12 @@
 use super::{
-    common_commission_sol_swap_v2, common_commission_token_swap_v2, CommissionSOLProxySwapAccounts,
-    CommissionSPLProxySwapAccounts, CommonCommissionProcessorV2,
+    CommissionSOLProxySwapAccounts, CommissionSPLProxySwapAccounts, CommonCommissionProcessorV2,
+    common_commission_sol_swap_v2, common_commission_token_swap_v2,
 };
+use crate::SwapArgs;
 use crate::constants::*;
 use crate::error::ErrorCode;
 use crate::processor::proxy_swap_processor::ProxySwapProcessor;
 use crate::utils::*;
-use crate::SwapArgs;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
@@ -39,10 +39,7 @@ impl<'info> CommonCommissionProcessorV2<'info> for PlatformFeeProcessorV2 {
             require!(commission_rate > 0, ErrorCode::InvalidCommissionRate);
         }
 
-        require!(
-            commission_rate <= COMMISSION_RATE_LIMIT_V2,
-            ErrorCode::InvalidCommissionRate
-        );
+        require!(commission_rate <= COMMISSION_RATE_LIMIT_V2, ErrorCode::InvalidCommissionRate);
         require!(
             platform_fee_rate.is_some()
                 && platform_fee_rate.unwrap() as u64 <= PLATFORM_FEE_RATE_LIMIT_V2,
@@ -76,10 +73,7 @@ impl<'info> CommonCommissionProcessorV2<'info> for PlatformFeeProcessorV2 {
                     destination_token_account.to_account_info(),
                     payer.to_account_info(),
                     payer.to_account_info(),
-                    destination_token_program
-                        .as_ref()
-                        .unwrap()
-                        .to_account_info(),
+                    destination_token_program.as_ref().unwrap().to_account_info(),
                     None,
                 )?;
             }
@@ -117,9 +111,7 @@ impl<'info> CommonCommissionProcessorV2<'info> for PlatformFeeProcessorV2 {
             {
                 let sa_account_box =
                     Box::leak(Box::new(sa_account.as_ref().unwrap().to_account_info()));
-                InterfaceAccount::<TokenAccount>::try_from(sa_account_box)
-                    .unwrap()
-                    .owner
+                InterfaceAccount::<TokenAccount>::try_from(sa_account_box).unwrap().owner
             } else {
                 sa_account.as_ref().unwrap().key()
             };
@@ -154,10 +146,7 @@ impl<'info> CommonCommissionProcessorV2<'info> for PlatformFeeProcessorV2 {
             && trim_account.unwrap().key() != crate::ID
             && trim_rate.unwrap() > 0
         {
-            require!(
-                trim_rate.unwrap() <= TRIM_RATE_LIMIT_V2,
-                ErrorCode::InvalidTrimRate
-            );
+            require!(trim_rate.unwrap() <= TRIM_RATE_LIMIT_V2, ErrorCode::InvalidTrimRate);
             let trim_limit = u64::try_from(
                 u128::from(amount_out)
                     .saturating_mul(trim_rate.unwrap() as u128)
@@ -168,10 +157,8 @@ impl<'info> CommonCommissionProcessorV2<'info> for PlatformFeeProcessorV2 {
             let trim_amount = if commission_direction {
                 (amount_out.saturating_sub(expected_amount_out)).min(trim_limit)
             } else {
-                (amount_out
-                    .saturating_sub(commission_amount)
-                    .saturating_sub(expected_amount_out))
-                .min(trim_limit)
+                (amount_out.saturating_sub(commission_amount).saturating_sub(expected_amount_out))
+                    .min(trim_limit)
             };
             // Transfer trim_amount
             if trim_amount > 0 {
@@ -192,10 +179,7 @@ impl<'info> CommonCommissionProcessorV2<'info> for PlatformFeeProcessorV2 {
                         destination_token_account.to_account_info(),
                         trim_account.unwrap().to_account_info(),
                         destination_mint.to_account_info(),
-                        destination_token_program
-                            .as_ref()
-                            .unwrap()
-                            .to_account_info(),
+                        destination_token_program.as_ref().unwrap().to_account_info(),
                         trim_amount,
                         destination_mint.decimals,
                         None,
@@ -241,10 +225,7 @@ impl<'info> CommonCommissionProcessorV2<'info> for PlatformFeeProcessorV2 {
                 && platform_fee_rate.unwrap() as u64 <= PLATFORM_FEE_RATE_LIMIT_V2,
             ErrorCode::InvalidPlatformFeeRate
         );
-        require!(
-            commission_rate <= COMMISSION_RATE_LIMIT_V2,
-            ErrorCode::InvalidCommissionRate
-        );
+        require!(commission_rate <= COMMISSION_RATE_LIMIT_V2, ErrorCode::InvalidCommissionRate);
         let (commission_amount, platform_fee_amount) = if commission_direction {
             // Commission direction: true-fromToken
             require!(
@@ -280,17 +261,15 @@ impl<'info> CommonCommissionProcessorV2<'info> for PlatformFeeProcessorV2 {
                     source_mint.decimals,
                     None,
                 )?;
-                let sa_account_key =
-                    if source_token_sa.as_ref().unwrap().owner == &crate::token_program::ID {
-                        let sa_account_box = Box::leak(Box::new(
-                            source_token_sa.as_ref().unwrap().to_account_info(),
-                        ));
-                        InterfaceAccount::<TokenAccount>::try_from(sa_account_box)
-                            .unwrap()
-                            .owner
-                    } else {
-                        source_token_sa.as_ref().unwrap().key()
-                    };
+                let sa_account_key = if source_token_sa.as_ref().unwrap().owner
+                    == &crate::token_program::ID
+                {
+                    let sa_account_box =
+                        Box::leak(Box::new(source_token_sa.as_ref().unwrap().to_account_info()));
+                    InterfaceAccount::<TokenAccount>::try_from(sa_account_box).unwrap().owner
+                } else {
+                    source_token_sa.as_ref().unwrap().key()
+                };
                 log_platform_fee_info(platform_fee_amount, &sa_account_key);
             }
 
@@ -345,9 +324,7 @@ impl<'info> CommonCommissionProcessorV2<'info> for PlatformFeeProcessorV2 {
                         let sa_account_box = Box::leak(Box::new(
                             destination_token_sa.as_ref().unwrap().to_account_info(),
                         ));
-                        InterfaceAccount::<TokenAccount>::try_from(sa_account_box)
-                            .unwrap()
-                            .owner
+                        InterfaceAccount::<TokenAccount>::try_from(sa_account_box).unwrap().owner
                     } else {
                         destination_token_sa.as_ref().unwrap().key()
                     };
@@ -380,10 +357,7 @@ impl<'info> CommonCommissionProcessorV2<'info> for PlatformFeeProcessorV2 {
             && trim_token_account.unwrap().key() != crate::ID
             && trim_rate.unwrap() > 0
         {
-            require!(
-                trim_rate.unwrap() <= TRIM_RATE_LIMIT_V2,
-                ErrorCode::InvalidTrimRate
-            );
+            require!(trim_rate.unwrap() <= TRIM_RATE_LIMIT_V2, ErrorCode::InvalidTrimRate);
             let trim_limit = u64::try_from(
                 u128::from(amount_out)
                     .saturating_mul(trim_rate.unwrap() as u128)
@@ -394,10 +368,8 @@ impl<'info> CommonCommissionProcessorV2<'info> for PlatformFeeProcessorV2 {
             let trim_amount = if commission_direction {
                 (amount_out.saturating_sub(expected_amount_out)).min(trim_limit)
             } else {
-                (amount_out
-                    .saturating_sub(commission_amount)
-                    .saturating_sub(expected_amount_out))
-                .min(trim_limit)
+                (amount_out.saturating_sub(commission_amount).saturating_sub(expected_amount_out))
+                    .min(trim_limit)
             };
 
             if trim_amount > 0 {
@@ -494,17 +466,9 @@ pub fn platform_fee_spl_proxy_swap_handler_v2<'a>(
     };
 
     let commission_token_program = if commission_direction {
-        ctx.accounts
-            .source_token_program
-            .as_ref()
-            .unwrap()
-            .to_account_info()
+        ctx.accounts.source_token_program.as_ref().unwrap().to_account_info()
     } else {
-        ctx.accounts
-            .destination_token_program
-            .as_ref()
-            .unwrap()
-            .to_account_info()
+        ctx.accounts.destination_token_program.as_ref().unwrap().to_account_info()
     };
     let swap_processor = &ProxySwapProcessor;
     let commission_processor = &PlatformFeeProcessorV2;

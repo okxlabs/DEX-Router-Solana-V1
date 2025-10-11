@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{meteora_dbc_program, HopAccounts, SWAP2_SELECTOR, ZERO_ADDRESS};
+use crate::{HopAccounts, SWAP2_SELECTOR, ZERO_ADDRESS, meteora_dbc_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use arrayref::array_ref;
@@ -112,7 +112,7 @@ impl<'info> MeteoraDynamicBondingCurve2<'info> {
             token_quote_program,
             referral_token_account,
             event_authority,
-            sysvar_instructions
+            sysvar_instructions,
         ]: &[AccountInfo<'info>; ACCOUNTS2_LEN] = array_ref![accounts, offset, ACCOUNTS2_LEN];
         Ok(Self {
             dex_program_id,
@@ -148,15 +148,8 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::MeteoraDbc amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    msg!("Dex::MeteoraDbc amount_in: {}, offset: {}", amount_in, offset);
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
 
     let mut swap_accounts =
         MeteoraDynamicBondingCurve::parse_accounts(remaining_accounts, *offset)?;
@@ -230,11 +223,8 @@ pub fn swap<'a>(
         swap_accounts.dex_program_id.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let amount_out = invoke_process(
         amount_in,
@@ -262,15 +252,8 @@ pub fn swap2<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::MeteoraDbc2 amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS2_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    msg!("Dex::MeteoraDbc2 amount_in: {}, offset: {}", amount_in, offset);
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS2_LEN, ErrorCode::InvalidAccountsLength);
 
     let mut swap_accounts =
         MeteoraDynamicBondingCurve2::parse_accounts(remaining_accounts, *offset)?;
@@ -346,11 +329,8 @@ pub fn swap2<'a>(
         swap_accounts.sysvar_instructions.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let amount_out = invoke_process(
         amount_in,

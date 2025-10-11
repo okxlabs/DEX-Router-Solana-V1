@@ -1,7 +1,11 @@
 use crate::error::ErrorCode;
+use crate::utils::logging::{
+    log_commission_info, log_swap_balance_before, log_swap_basic_info, log_swap_end,
+};
 use crate::utils::token::{close_token_account, sync_wsol_account, transfer_sol, transfer_token};
-use crate::utils::logging::{log_swap_basic_info, log_swap_balance_before, log_swap_end, log_commission_info};
-use crate::{system_program, wsol_program, COMMISSION_DENOMINATOR, COMMISSION_RATE_LIMIT, SEED_TEMP_WSOL};
+use crate::{
+    COMMISSION_DENOMINATOR, COMMISSION_RATE_LIMIT, SEED_TEMP_WSOL, system_program, wsol_program,
+};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
@@ -61,10 +65,7 @@ pub fn commission_wrap_unwrap_handler<'a>(
     order_id: u64,
 ) -> Result<()> {
     // CHECK: CommissionSwapArgs
-    require!(
-        args.commission_rate <= COMMISSION_RATE_LIMIT,
-        ErrorCode::InvalidCommissionRate
-    );
+    require!(args.commission_rate <= COMMISSION_RATE_LIMIT, ErrorCode::InvalidCommissionRate);
 
     require!(
         ctx.accounts.wsol_mint.key() == wsol_program::id(),
@@ -77,7 +78,7 @@ pub fn commission_wrap_unwrap_handler<'a>(
         &ctx.accounts.payer_wsol_account,
         args.wrap_direction,
         args.amount_in,
-        order_id
+        order_id,
     )?;
 
     let amount_out = args.amount_in;
@@ -154,10 +155,7 @@ pub fn commission_wrap_unwrap_handler<'a>(
         )?;
     }
 
-    log_commission_info(
-        args.commission_direction,
-        commission_amount
-    );
+    log_commission_info(args.commission_direction, commission_amount);
 
     Ok(())
 }
@@ -168,18 +166,9 @@ pub fn wrap_process<'info>(
     amount: u64,
     token_program: Interface<'info, TokenInterface>,
 ) -> Result<()> {
-    transfer_sol(
-        payer.to_account_info(),
-        wsol_account.to_account_info(),
-        amount,
-        None,
-    )?;
+    transfer_sol(payer.to_account_info(), wsol_account.to_account_info(), amount, None)?;
 
-    sync_wsol_account(
-        wsol_account.to_account_info(),
-        token_program.to_account_info(),
-        None,
-    )?;
+    sync_wsol_account(wsol_account.to_account_info(), token_program.to_account_info(), None)?;
 
     Ok(())
 }
@@ -238,7 +227,7 @@ pub fn log_wrap_unwrap_initial_info<'info>(
         source_mint,
         destination_mint,
         &payer.key(), // SOL address is wallet address
-        &payer.key()  // destination token account owner address is wallet address
+        &payer.key(), // destination token account owner address is wallet address
     );
 
     let sol_balance = payer.lamports();
@@ -257,7 +246,7 @@ pub fn log_wrap_unwrap_initial_info<'info>(
         before_destination_balance,
         amount_in,
         amount_in, // for wrap/unwrap, expect_amount_out equals amount_in
-        amount_in  // min_return also equals amount_in
+        amount_in, // min_return also equals amount_in
     );
 
     Ok((before_source_balance, before_destination_balance))
@@ -271,7 +260,7 @@ pub fn log_wrap_unwrap_final_info<'info>(
     before_destination_balance: u64,
 ) -> Result<()> {
     let sol_balance_after = payer.lamports();
-    
+
     payer_wsol_account.reload()?;
     let wsol_balance_after = payer_wsol_account.amount;
 
@@ -283,16 +272,18 @@ pub fn log_wrap_unwrap_final_info<'info>(
         (wsol_balance_after, sol_balance_after)
     };
 
-    let source_token_change = before_source_balance.checked_sub(after_source_balance)
+    let source_token_change = before_source_balance
+        .checked_sub(after_source_balance)
         .ok_or(ErrorCode::CalculationError)?;
-    let destination_token_change = after_destination_balance.checked_sub(before_destination_balance)
+    let destination_token_change = after_destination_balance
+        .checked_sub(before_destination_balance)
         .ok_or(ErrorCode::CalculationError)?;
 
     log_swap_end(
         after_source_balance,
         after_destination_balance,
         source_token_change,
-        destination_token_change
+        destination_token_change,
     );
 
     Ok(())

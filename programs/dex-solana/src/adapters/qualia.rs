@@ -6,7 +6,7 @@ use anchor_lang::solana_program::instruction::Instruction;
 use anchor_spl::{token::Token, token_interface::TokenAccount};
 use arrayref::array_ref;
 
-use crate::{qualia_program, HopAccounts};
+use crate::{HopAccounts, qualia_program};
 
 use super::common::DexProcessor;
 
@@ -41,7 +41,8 @@ impl<'info> QualiaSwapAccounts<'info> {
             token_in_vault,
             token_out_vault,
             sysvar,
-        ]: &[AccountInfo<'info>; SWAP_ACCOUNTS_LEN] = array_ref![accounts, offset, SWAP_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; SWAP_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, SWAP_ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -126,11 +127,8 @@ pub fn swap<'a>(
         swap_accounts.sysvar.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &QualiaSwapProcessor;
     let amount_out = invoke_process(

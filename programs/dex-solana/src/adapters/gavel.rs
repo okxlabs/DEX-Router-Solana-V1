@@ -2,10 +2,10 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_spl::token_interface::TokenAccount;
 
-use crate::adapters::common::{before_check, invoke_process};
-use crate::{gavel_program, HopAccounts};
-use crate::error::ErrorCode;
 use super::common::DexProcessor;
+use crate::adapters::common::{before_check, invoke_process};
+use crate::error::ErrorCode;
+use crate::{HopAccounts, gavel_program};
 use arrayref::array_ref;
 
 const ARGS_LEN: usize = 19;
@@ -33,11 +33,12 @@ impl<'info> GavelSwapAccounts<'info> {
             swap_source_token,
             swap_destination_token,
             log_authority,
-            pool,   
+            pool,
             base_vault,
             quote_vault,
             token_program,
-        ]: &[AccountInfo<'info>; SWAP_ACCOUNTS_LEN] = array_ref![accounts, offset, SWAP_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; SWAP_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, SWAP_ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -65,11 +66,7 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::GavelSwap amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::GavelSwap amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + SWAP_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -93,21 +90,20 @@ pub fn swap<'a>(
         owner_seeds,
     )?;
 
-
-    let (direction, user_base_token_account, user_quote_token_account) =
-        if swap_accounts.swap_source_token.mint == swap_accounts.quote_vault.mint
-            && swap_accounts.swap_destination_token.mint == swap_accounts.base_vault.mint
-        {
-            (0u8, swap_accounts.swap_destination_token.clone(), swap_accounts.swap_source_token.clone())
-        } else if swap_accounts.swap_source_token.mint == swap_accounts.base_vault.mint
-            && swap_accounts.swap_destination_token.mint == swap_accounts.quote_vault.mint
-        {
-            (1u8, swap_accounts.swap_source_token.clone(), swap_accounts.swap_destination_token.clone())
-        } else {
-            return Err(ErrorCode::InvalidTokenMint.into());
-        };
-
-
+    let (direction, user_base_token_account, user_quote_token_account) = if swap_accounts
+        .swap_source_token
+        .mint
+        == swap_accounts.quote_vault.mint
+        && swap_accounts.swap_destination_token.mint == swap_accounts.base_vault.mint
+    {
+        (0u8, swap_accounts.swap_destination_token.clone(), swap_accounts.swap_source_token.clone())
+    } else if swap_accounts.swap_source_token.mint == swap_accounts.base_vault.mint
+        && swap_accounts.swap_destination_token.mint == swap_accounts.quote_vault.mint
+    {
+        (1u8, swap_accounts.swap_source_token.clone(), swap_accounts.swap_destination_token.clone())
+    } else {
+        return Err(ErrorCode::InvalidTokenMint.into());
+    };
 
     let mut data = Vec::with_capacity(ARGS_LEN);
     data.push(0u8); //discriminator
@@ -140,11 +136,8 @@ pub fn swap<'a>(
         swap_accounts.token_program.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &GavelProcessor;
     let amount_out = invoke_process(

@@ -1,6 +1,6 @@
 use crate::constants::*;
 use crate::processor::proxy_swap_processor::ProxySwapProcessor;
-use crate::{common_swap, SwapArgs};
+use crate::{SwapArgs, common_swap};
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};

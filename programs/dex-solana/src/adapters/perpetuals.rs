@@ -2,8 +2,8 @@ use super::common::DexProcessor;
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
 use crate::{
-    perpetuals_program, HopAccounts, PERPETUALS_ADDLIQ_SELECTOR, PERPETUALS_REMOVELIQ_SELECTOR,
-    PERPETUALS_SWAP_SELECTOR,
+    HopAccounts, PERPETUALS_ADDLIQ_SELECTOR, PERPETUALS_REMOVELIQ_SELECTOR,
+    PERPETUALS_SWAP_SELECTOR, perpetuals_program,
 };
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::{token::Token, token_interface::TokenAccount};
@@ -54,8 +54,9 @@ impl<'info> PerpetualsAccount<'info> {
             custody_token_account,
             jlp_mint,
             token_program,
-            event_authority
-        ]: &[AccountInfo<'info>; PERPETUALS_LIQUIDITY_ACCOUNTS_LEN] = array_ref![accounts, offset, PERPETUALS_LIQUIDITY_ACCOUNTS_LEN];
+            event_authority,
+        ]: &[AccountInfo<'info>; PERPETUALS_LIQUIDITY_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, PERPETUALS_LIQUIDITY_ACCOUNTS_LEN];
         let remaining_accounts = array_ref![
             accounts,
             offset + PERPETUALS_LIQUIDITY_ACCOUNTS_LEN,
@@ -132,11 +133,8 @@ impl<'info> PerpetualsAccount<'info> {
             self.event_authority.to_account_info(),
             self.dex_program_id.to_account_info(),
         ]);
-        account_infos.extend(
-            self.remaining_accounts
-                .iter()
-                .map(|account| account.to_account_info()),
-        );
+        account_infos
+            .extend(self.remaining_accounts.iter().map(|account| account.to_account_info()));
         account_infos
     }
 }
@@ -182,8 +180,9 @@ impl<'info> PerpetualsSwapAccount<'info> {
             dispensing_custody_pythnet_price_account,
             dispensing_custody_token_account,
             token_program,
-            event_authority
-        ]: &[AccountInfo<'info>; PERPETUALS_SWAP_ACCOUNTS_LEN] = array_ref![accounts, offset, PERPETUALS_SWAP_ACCOUNTS_LEN];
+            event_authority,
+        ]: &[AccountInfo<'info>; PERPETUALS_SWAP_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, PERPETUALS_SWAP_ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             owner,
@@ -241,14 +240,11 @@ impl<'info> PerpetualsSwapAccount<'info> {
             self.perpetuals_pool.to_account_info(),
             self.receiving_custody.to_account_info(),
             self.receiving_custody_doves_price_account.to_account_info(),
-            self.receiving_custody_pythnet_price_account
-                .to_account_info(),
+            self.receiving_custody_pythnet_price_account.to_account_info(),
             self.receiving_custody_token_account.to_account_info(),
             self.dispensing_custody.to_account_info(),
-            self.dispensing_custody_doves_price_account
-                .to_account_info(),
-            self.dispensing_custody_pythnet_price_account
-                .to_account_info(),
+            self.dispensing_custody_doves_price_account.to_account_info(),
+            self.dispensing_custody_pythnet_price_account.to_account_info(),
             self.dispensing_custody_token_account.to_account_info(),
             self.token_program.to_account_info(),
             self.event_authority.to_account_info(),
@@ -266,11 +262,7 @@ pub fn perpetuals_swap_handler<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::PerpetualsSwap amount in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::PerpetualsSwap amount in: {}, offset: {}", amount_in, offset);
 
     let mut swap_accounts = PerpetualsSwapAccount::parse_accounts(remaining_accounts, *offset)?;
 
@@ -330,11 +322,7 @@ pub fn liquidity_handler<'a>(
     is_add_liquidity: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::PerpetualsLiquidityHandler amount in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::PerpetualsLiquidityHandler amount in: {}, offset: {}", amount_in, offset);
     let mut handle_liquidity_accounts =
         PerpetualsAccount::parse_accounts(remaining_accounts, *offset)?;
 

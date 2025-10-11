@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{openbookv2_program, HopAccounts, PLACE_TAKE_ORDER_SELECTOR, ZERO_ADDRESS};
+use crate::{HopAccounts, PLACE_TAKE_ORDER_SELECTOR, ZERO_ADDRESS, openbookv2_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::TokenAccount;
@@ -69,7 +69,7 @@ impl<'info> PlaceTakeOrderAccounts<'info> {
             open_orders_account0,
             open_orders_account1,
             open_orders_account2,
-      ]: & [AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -111,15 +111,8 @@ pub fn place_take_order<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::OpenBookV2 amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    msg!("Dex::OpenBookV2 amount_in: {}, offset: {}", amount_in, offset);
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
 
     let mut swap_accounts = PlaceTakeOrderAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &openbookv2_program::id() {
@@ -153,15 +146,12 @@ pub fn place_take_order<'a>(
             .unwrap()
             .checked_div(base_lot_size)
             .ok_or(ErrorCode::CalculationError)?;
-        max_quote_lots_including_fees = i64::MAX
-            .checked_div(quote_lot_size)
-            .ok_or(ErrorCode::CalculationError)?;
+        max_quote_lots_including_fees =
+            i64::MAX.checked_div(quote_lot_size).ok_or(ErrorCode::CalculationError)?;
     } else {
         side = Side::Bid;
         price_lots = i64::MAX;
-        max_base_lots = i64::MAX
-            .checked_div(base_lot_size)
-            .ok_or(ErrorCode::CalculationError)?;
+        max_base_lots = i64::MAX.checked_div(base_lot_size).ok_or(ErrorCode::CalculationError)?;
         max_quote_lots_including_fees = i64::try_from(amount_in)
             .unwrap()
             .checked_div(quote_lot_size)
@@ -245,11 +235,8 @@ pub fn place_take_order<'a>(
         account_infos.push(swap_accounts.open_orders_account2.to_account_info());
     }
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &OpenbookV2Processor;
     let amount_out = invoke_process(

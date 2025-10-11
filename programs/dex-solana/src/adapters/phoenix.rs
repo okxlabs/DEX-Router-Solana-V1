@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{phoenix_program, HopAccounts};
+use crate::{HopAccounts, phoenix_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::TokenAccount;
@@ -40,7 +40,7 @@ impl<'info> SwapAccounts<'info> {
             base_vault,
             quote_vault,
             token_program,
-      ]: & [AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -73,10 +73,7 @@ pub fn swap<'a>(
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
     msg!("Dex::Phoenix amount_in: {}, offset: {}", amount_in, offset);
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
 
     let mut swap_accounts = SwapAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &phoenix_program::id() {
@@ -102,21 +99,11 @@ pub fn swap<'a>(
     let (base_lot_size, quote_lot_size) = swap_accounts.get_lot_size()?;
     let (side, num_base_lots, num_quote_lots) =
         if swap_accounts.swap_source_token.mint == swap_accounts.base_vault.mint {
-            (
-                1u8,
-                amount_in
-                    .checked_div(base_lot_size)
-                    .ok_or(ErrorCode::CalculationError)?,
-                0u64,
-            ) // 'ask' side
+            (1u8, amount_in.checked_div(base_lot_size).ok_or(ErrorCode::CalculationError)?, 0u64)
+        // 'ask' side
         } else {
-            (
-                0u8,
-                0u64,
-                amount_in
-                    .checked_div(quote_lot_size)
-                    .ok_or(ErrorCode::CalculationError)?,
-            ) // 'bid' side
+            (0u8, 0u64, amount_in.checked_div(quote_lot_size).ok_or(ErrorCode::CalculationError)?)
+            // 'bid' side
         };
 
     let order_type = 2u8; // 'immediateOrCancel'
@@ -172,11 +159,8 @@ pub fn swap<'a>(
         swap_accounts.token_program.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &PhoenixProcessor;
     let amount_out = invoke_process(

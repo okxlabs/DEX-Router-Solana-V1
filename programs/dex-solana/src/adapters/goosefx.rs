@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{goosefx_gamma_program, HopAccounts, GAMMA_ORACLE_SWAP_SELECTOR};
+use crate::{GAMMA_ORACLE_SWAP_SELECTOR, HopAccounts, goosefx_gamma_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use arrayref::array_ref;
@@ -79,15 +79,8 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::goosefx_gamma amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    msg!("Dex::goosefx_gamma amount_in: {}, offset: {}", amount_in, offset);
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
     let mut swap_accounts = GooseFxAccount::parse_accounts(remaining_accounts, *offset)?;
 
     if swap_accounts.dex_program_id.key != &goosefx_gamma_program::id() {
@@ -149,11 +142,8 @@ pub fn swap<'a>(
         swap_accounts.observation_state.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &GooseFxProcessor;
     let amount_out = invoke_process(

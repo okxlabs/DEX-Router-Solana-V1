@@ -1,6 +1,6 @@
-use crate::processor::swap_processor::SwapProcessor;
 use crate::BRIDGE_TO_LOG_SELECTOR;
-use crate::{common_swap, error::ErrorCode, SwapArgs};
+use crate::processor::swap_processor::SwapProcessor;
+use crate::{SwapArgs, common_swap, error::ErrorCode};
 use anchor_lang::{
     prelude::*,
     solana_program::{instruction::Instruction, program::invoke},
@@ -188,10 +188,7 @@ pub fn cpi_bridge_to_log<'info>(
 ) -> Result<()> {
     let offset = offset as usize;
     let len = len as usize;
-    require!(
-        remaining_accounts.len() >= offset + len,
-        ErrorCode::InvalidAccountsLength
-    );
+    require!(remaining_accounts.len() >= offset + len, ErrorCode::InvalidAccountsLength);
     // get bridgeTo remaining accounts
     let bridge_remaining_accounts = Vec::from(&remaining_accounts[offset..offset + len]);
 
@@ -226,11 +223,7 @@ pub fn cpi_bridge_to_log<'info>(
     ];
     accounts_infos.extend(bridge_remaining_accounts.to_account_infos());
 
-    let ix = Instruction {
-        program_id: bridge_program.key(),
-        accounts: accounts,
-        data: data,
-    };
+    let ix = Instruction { program_id: bridge_program.key(), accounts, data };
     invoke(&ix, &accounts_infos)?;
 
     Ok(())

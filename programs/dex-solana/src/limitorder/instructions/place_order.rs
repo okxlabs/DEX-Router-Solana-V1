@@ -93,11 +93,7 @@ pub fn place_order_handler(
 
     // Check if the deadline is valid: should >= 5 minutes
     let create_ts = solana_program::clock::Clock::get()?.unix_timestamp as u64;
-    require_gte!(
-        deadline,
-        create_ts + MIN_DEADLINE,
-        LimitOrderError::InvalidDeadline
-    );
+    require_gte!(deadline, create_ts + MIN_DEADLINE, LimitOrderError::InvalidDeadline);
 
     // Check if the input token is the same as the output token
     require!(
@@ -107,18 +103,12 @@ pub fn place_order_handler(
 
     // Check amount
     require!(making_amount > 0, LimitOrderError::InvalidMakingAmount);
-    require!(
-        expect_taking_amount > 0,
-        LimitOrderError::InvalidExpectTakingAmount
-    );
+    require!(expect_taking_amount > 0, LimitOrderError::InvalidExpectTakingAmount);
     require!(
         min_return_amount <= expect_taking_amount && min_return_amount > 0,
         LimitOrderError::InvalidMinReturnAmount
     );
-    require!(
-        trade_fee >= global_config.trade_fee,
-        LimitOrderError::InvalidTradeFee
-    );
+    require!(trade_fee >= global_config.trade_fee, LimitOrderError::InvalidTradeFee);
 
     // Prepaid trade fee
     transfer_sol(
@@ -144,13 +134,9 @@ pub fn place_order_handler(
     // Calculate the actual making amount
     ctx.accounts.escrow_token_account.reload()?;
     let after_balance = ctx.accounts.escrow_token_account.amount;
-    let actual_making_amount = after_balance
-        .checked_sub(before_balance)
-        .ok_or(LimitOrderError::MathOverflow)?;
-    require!(
-        actual_making_amount > 0,
-        LimitOrderError::ActualMakingAmountIsZero
-    );
+    let actual_making_amount =
+        after_balance.checked_sub(before_balance).ok_or(LimitOrderError::MathOverflow)?;
+    require!(actual_making_amount > 0, LimitOrderError::ActualMakingAmountIsZero);
 
     let maker = ctx.accounts.maker.key();
     let input_token_mint = ctx.accounts.input_token_mint.key();
@@ -175,7 +161,7 @@ pub fn place_order_handler(
 
     emit_cpi!(PlaceOrderEvent {
         order_id,
-        maker: maker,
+        maker,
         input_token_mint,
         output_token_mint,
         making_amount: actual_making_amount,

@@ -1,16 +1,22 @@
 use crate::error::ErrorCode;
+use crate::instructions::commission_wrap_unwrap::{
+    log_wrap_unwrap_final_info, log_wrap_unwrap_initial_info,
+};
 use crate::utils::log_rate_info;
-use crate::utils::token::{sync_wsol_account, transfer_sol, transfer_token};
 use crate::utils::logging::{log_commission_info, log_platform_fee_info};
-use crate::instructions::commission_wrap_unwrap::{log_wrap_unwrap_initial_info, log_wrap_unwrap_final_info};
-use crate::{unwrap_process, wrap_process, wsol_program, COMMISSION_DENOMINATOR_V2, COMMISSION_RATE_LIMIT_V2, PLATFORM_FEE_DENOMINATOR_V2, PLATFORM_FEE_RATE_LIMIT_V2, SA_AUTHORITY_SEED, SEED_TEMP_WSOL};
+use crate::utils::token::{sync_wsol_account, transfer_sol, transfer_token};
+use crate::{
+    COMMISSION_DENOMINATOR_V2, COMMISSION_RATE_LIMIT_V2, PLATFORM_FEE_DENOMINATOR_V2,
+    PLATFORM_FEE_RATE_LIMIT_V2, SA_AUTHORITY_SEED, SEED_TEMP_WSOL, unwrap_process, wrap_process,
+    wsol_program,
+};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone)]
 pub struct PlatformFeeWrapUnwrapArgsV2 {
     pub amount_in: u64,
-    pub commission_info: u32, // Commission rate
+    pub commission_info: u32,   // Commission rate
     pub platform_fee_rate: u32, // Platform fee rate
 }
 
@@ -85,10 +91,7 @@ pub fn platform_fee_wrap_unwrap_handler_v2<'a>(
         ErrorCode::InvalidPlatformFeeRate
     );
     // CHECK: CommissionSwapArgs
-    require!(
-        commission_rate <= COMMISSION_RATE_LIMIT_V2,
-        ErrorCode::InvalidCommissionRate
-    );
+    require!(commission_rate <= COMMISSION_RATE_LIMIT_V2, ErrorCode::InvalidCommissionRate);
 
     require!(
         ctx.accounts.wsol_mint.key() == wsol_program::id(),
@@ -101,7 +104,7 @@ pub fn platform_fee_wrap_unwrap_handler_v2<'a>(
         &ctx.accounts.payer_wsol_account,
         wrap_direction,
         args.amount_in,
-        order_id
+        order_id,
     )?;
 
     let amount_out = args.amount_in;
@@ -112,36 +115,36 @@ pub fn platform_fee_wrap_unwrap_handler_v2<'a>(
     if commission_direction {
         // Commission direction: true-fromToken
         // Commission for fromToken
-        commission_amount = 
-            u64::try_from(
-                u128::from(args.amount_in)
+        commission_amount = u64::try_from(
+            u128::from(args.amount_in)
                 .checked_mul(commission_rate as u128)
                 .ok_or(ErrorCode::CalculationError)?
                 .checked_div(COMMISSION_DENOMINATOR_V2 as u128 - commission_rate as u128)
-                .ok_or(ErrorCode::CalculationError)?
-            ).unwrap();
+                .ok_or(ErrorCode::CalculationError)?,
+        )
+        .unwrap();
     } else {
         // Commission direction: false-toToken
         // Commission for toToken
-        commission_amount = 
-            u64::try_from(
-                u128::from(amount_out)
+        commission_amount = u64::try_from(
+            u128::from(amount_out)
                 .checked_mul(commission_rate as u128)
                 .ok_or(ErrorCode::CalculationError)?
                 .checked_div(COMMISSION_DENOMINATOR_V2 as u128)
-                .ok_or(ErrorCode::CalculationError)?
-            ).unwrap();
+                .ok_or(ErrorCode::CalculationError)?,
+        )
+        .unwrap();
     }
 
     if args.platform_fee_rate > 0 {
-        platform_fee_amount = 
-            u64::try_from(
-                u128::from(commission_amount)
+        platform_fee_amount = u64::try_from(
+            u128::from(commission_amount)
                 .checked_mul(args.platform_fee_rate as u128)
                 .ok_or(ErrorCode::CalculationError)?
                 .checked_div(PLATFORM_FEE_DENOMINATOR_V2 as u128)
-                .ok_or(ErrorCode::CalculationError)?
-            ).unwrap();
+                .ok_or(ErrorCode::CalculationError)?,
+        )
+        .unwrap();
     }
 
     if wrap_direction {
@@ -171,7 +174,7 @@ pub fn platform_fee_wrap_unwrap_handler_v2<'a>(
         &mut ctx.accounts.payer_wsol_account,
         wrap_direction,
         before_source_balance,
-        before_destination_balance
+        before_destination_balance,
     )?;
 
     let sa_account = if commission_direction {
@@ -187,18 +190,15 @@ pub fn platform_fee_wrap_unwrap_handler_v2<'a>(
         sa_account.key()
     };
 
-    let commission_account_info = if (commission_direction && wrap_direction)
-        || (!commission_direction && !wrap_direction)
-    {
-        ctx.accounts.commission_sol_account.to_account_info()
-    } else {
-        ctx.accounts.commission_wsol_account.to_account_info()
-    };
+    let commission_account_info =
+        if (commission_direction && wrap_direction) || (!commission_direction && !wrap_direction) {
+            ctx.accounts.commission_sol_account.to_account_info()
+        } else {
+            ctx.accounts.commission_wsol_account.to_account_info()
+        };
 
-    if (commission_direction && wrap_direction)
-        || (!commission_direction && !wrap_direction)
-    {
-        // decide sa according to the direction 
+    if (commission_direction && wrap_direction) || (!commission_direction && !wrap_direction) {
+        // decide sa according to the direction
         // Transfer platform fee to sa
         if args.platform_fee_rate > 0 && platform_fee_amount > 0 {
             transfer_sol(
@@ -252,7 +252,7 @@ pub fn platform_fee_wrap_unwrap_handler_v2<'a>(
 
     log_commission_info(
         commission_direction,
-        commission_amount.checked_sub(platform_fee_amount).unwrap()
+        commission_amount.checked_sub(platform_fee_amount).unwrap(),
     );
     commission_account_info.key().log();
 

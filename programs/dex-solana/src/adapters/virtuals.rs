@@ -1,8 +1,8 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
 use crate::{
-    virtual_token_mint, virtuals_program, HopAccounts, VIRTUALS_BUY_SELECTOR,
-    VIRTUALS_SELL_SELECTOR,
+    HopAccounts, VIRTUALS_BUY_SELECTOR, VIRTUALS_SELL_SELECTOR, virtual_token_mint,
+    virtuals_program,
 };
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token::Token;
@@ -76,10 +76,7 @@ pub fn swap<'a>(
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
     msg!("Dex::virtuals amount_in: {}, offset: {}", amount_in, offset);
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
     let mut swap_accounts = VirtualsAccount::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &virtuals_program::id() {
         return Err(ErrorCode::InvalidProgramId.into());
@@ -151,18 +148,13 @@ pub fn swap<'a>(
         user_token_account_info,
         swap_accounts.vpool_token_ata.to_account_info(),
         swap_accounts.platform_prototype.to_account_info(),
-        swap_accounts
-            .platform_prototype_virtuals_ata
-            .to_account_info(),
+        swap_accounts.platform_prototype_virtuals_ata.to_account_info(),
         swap_accounts.vpool_virtuals_ata.to_account_info(),
         swap_accounts.token_program.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &VirtualsProcessor;
     let amount_out = invoke_process(

@@ -57,7 +57,8 @@ impl SwapToBProcessor {
         commission_direction: bool,
         platform_fee_rate: Option<u16>,
         trim_rate: Option<u8>,
-    ) -> Result<(u64, u64, u64, u64, bool)> {
+        charge_rate: Option<u16>,
+    ) -> Result<(u64, u64, u64, u64, u64, bool)> {
         let mut commission_amount = 0;
         let mut platform_fee_amount = 0;
         let mut actual_amount_out = amount_out;
@@ -73,13 +74,14 @@ impl SwapToBProcessor {
         }
 
         // Calculate trim amount
-        let trim_amount = calculate_trim_amount(
+        let (trim_amount, charge_amount) = calculate_trim_amount(
             amount_out,
             expected_amount_out,
             commission_amount,
             platform_fee_amount,
             commission_direction,
             trim_rate,
+            charge_rate,
         )?;
 
         // Calculate actual amount out
@@ -89,14 +91,20 @@ impl SwapToBProcessor {
             .checked_sub(platform_fee_amount)
             .ok_or(ErrorCode::CalculationError)?
             .checked_sub(trim_amount)
+            .ok_or(ErrorCode::CalculationError)?
+            .checked_sub(charge_amount)
             .ok_or(ErrorCode::CalculationError)?;
 
         Ok((
             commission_amount,
             platform_fee_amount,
             trim_amount,
+            charge_amount,
             actual_amount_out,
-            commission_amount > 0 || platform_fee_amount > 0 || trim_amount > 0,
+            commission_amount > 0
+                || platform_fee_amount > 0
+                || trim_amount > 0
+                || charge_amount > 0,
         ))
     }
 
@@ -111,14 +119,8 @@ impl SwapToBProcessor {
         destination_token_program: &Option<Interface<'info, TokenInterface>>,
         amount_out: u64,
     ) -> Result<()> {
-        require!(
-            destination_mint.key() == wsol_program::ID,
-            ErrorCode::InvalidMint
-        );
-        require!(
-            destination_token_program.is_some(),
-            ErrorCode::DestinationTokenProgramIsNone
-        );
+        require!(destination_mint.key() == wsol_program::ID, ErrorCode::InvalidMint);
+        require!(destination_token_program.is_some(), ErrorCode::DestinationTokenProgramIsNone);
         require!(
             destination_token_account.owner == payer.key(),
             ErrorCode::InvalidDestinationTokenAccount
@@ -168,16 +170,10 @@ impl SwapToBProcessor {
             return Ok(());
         }
         if commission_amount > 0 {
-            require!(
-                commission_account.is_some(),
-                ErrorCode::CommissionAccountIsNone
-            );
+            require!(commission_account.is_some(), ErrorCode::CommissionAccountIsNone);
         }
         if platform_fee_amount > 0 {
-            require!(
-                platform_fee_account.is_some(),
-                ErrorCode::PlatformFeeAccountIsNone
-            );
+            require!(platform_fee_account.is_some(), ErrorCode::PlatformFeeAccountIsNone);
         }
         require!(sa_authority.is_some(), ErrorCode::SaAuthorityIsNone);
         let sa_authority = sa_authority.as_ref().unwrap();
@@ -209,10 +205,7 @@ impl SwapToBProcessor {
             }
         } else {
             require!(source_token_sa.is_some(), ErrorCode::SourceTokenSaIsNone);
-            require!(
-                source_token_program.is_some(),
-                ErrorCode::SourceTokenProgramIsNone
-            );
+            require!(source_token_program.is_some(), ErrorCode::SourceTokenProgramIsNone);
             let source_token_sa = source_token_sa.as_ref().unwrap();
             let source_token_program = source_token_program.as_ref().unwrap();
 
@@ -271,10 +264,7 @@ impl SwapToBProcessor {
             return Ok(false);
         }
         if commission_amount > 0 {
-            require!(
-                commission_account.is_some(),
-                ErrorCode::CommissionAccountIsNone
-            );
+            require!(commission_account.is_some(), ErrorCode::CommissionAccountIsNone);
             if acc_close_flag {
                 require!(
                     is_system_account(commission_account.as_ref().unwrap()),
@@ -283,10 +273,7 @@ impl SwapToBProcessor {
             }
         }
         if platform_fee_amount > 0 {
-            require!(
-                platform_fee_account.is_some(),
-                ErrorCode::PlatformFeeAccountIsNone
-            );
+            require!(platform_fee_account.is_some(), ErrorCode::PlatformFeeAccountIsNone);
             if acc_close_flag {
                 require!(
                     is_system_account(platform_fee_account.as_ref().unwrap()),
@@ -333,14 +320,8 @@ impl SwapToBProcessor {
 
             return Ok(true);
         } else {
-            require!(
-                destination_token_sa.is_some(),
-                ErrorCode::DestinationTokenSaIsNone
-            );
-            require!(
-                destination_token_program.is_some(),
-                ErrorCode::DestinationTokenProgramIsNone
-            );
+            require!(destination_token_sa.is_some(), ErrorCode::DestinationTokenSaIsNone);
+            require!(destination_token_program.is_some(), ErrorCode::DestinationTokenProgramIsNone);
             let destination_token_sa = destination_token_sa.as_ref().unwrap();
             let destination_token_program = destination_token_program.as_ref().unwrap();
 
@@ -389,27 +370,32 @@ impl SwapToBProcessor {
         destination_token_program: &Option<Interface<'info, TokenInterface>>,
         amount_out: u64,
         trim_amount: u64,
+        charge_amount: u64,
         trim_account: Option<&AccountInfo<'info>>,
+        charge_account: Option<&AccountInfo<'info>>,
         is_unwrap_wsol_to_sa: bool,
         acc_close_flag: bool,
     ) -> Result<bool> {
-        if trim_amount == 0 {
+        if trim_amount == 0 && charge_amount == 0 {
             return Ok(is_unwrap_wsol_to_sa);
         }
         require!(trim_account.is_some(), ErrorCode::TrimAccountIsNone);
         let trim_account = trim_account.as_ref().unwrap();
         if acc_close_flag {
-            require!(
-                is_system_account(trim_account),
-                ErrorCode::InvalidTrimAccount
-            );
+            require!(is_system_account(trim_account), ErrorCode::InvalidTrimAccount);
         }
 
-        if is_charge_sol(
-            &Some(trim_account.to_account_info()),
-            &None,
-            destination_mint,
-        ) {
+        let charge_account = if charge_amount > 0 {
+            require!(charge_account.is_some(), ErrorCode::TrimAccountIsNone);
+            if acc_close_flag {
+                require!(is_system_account(charge_account.unwrap()), ErrorCode::InvalidTrimAccount);
+            }
+            Some(charge_account.unwrap().to_account_info())
+        } else {
+            None
+        };
+
+        if is_charge_sol(&Some(trim_account.to_account_info()), &charge_account, destination_mint) {
             if !is_unwrap_wsol_to_sa {
                 // Unwrap wsol to sa_authority
                 self.unwrap_wsol_to_sa(
@@ -423,38 +409,53 @@ impl SwapToBProcessor {
                 )?;
             }
 
-            // Transfer SOL trim fee
-            transfer_sol_fee(
-                sa_authority,
-                trim_account,
-                trim_amount,
-                Some(SA_AUTHORITY_SEED),
-            )?;
-            log_trim_fee_info(trim_amount, &trim_account.key());
+            if trim_amount > 0 {
+                // Transfer SOL trim fee
+                transfer_sol_fee(sa_authority, trim_account, trim_amount, Some(SA_AUTHORITY_SEED))?;
+                log_trim_fee_info(trim_amount, &trim_account.key());
+            }
+
+            if charge_amount > 0 {
+                transfer_sol_fee(
+                    sa_authority,
+                    charge_account.as_ref().unwrap(),
+                    charge_amount,
+                    Some(SA_AUTHORITY_SEED),
+                )?;
+                log_platform_trim_fee_info(charge_amount, &charge_account.unwrap().key());
+            }
             return Ok(true);
         } else {
-            require!(
-                destination_token_sa.is_some(),
-                ErrorCode::DestinationTokenSaIsNone
-            );
-            require!(
-                destination_token_program.is_some(),
-                ErrorCode::DestinationTokenProgramIsNone
-            );
+            require!(destination_token_sa.is_some(), ErrorCode::DestinationTokenSaIsNone);
+            require!(destination_token_program.is_some(), ErrorCode::DestinationTokenProgramIsNone);
             let destination_token_sa = destination_token_sa.as_ref().unwrap();
             let destination_token_program = destination_token_program.as_ref().unwrap();
 
-            // Transfer token trim fee
-            transfer_token_fee(
-                sa_authority,
-                destination_token_sa,
-                destination_mint,
-                destination_token_program,
-                trim_account,
-                trim_amount,
-                Some(SA_AUTHORITY_SEED),
-            )?;
-            log_trim_fee_info(trim_amount, &trim_account.key());
+            if trim_amount > 0 {
+                transfer_token_fee(
+                    sa_authority,
+                    destination_token_sa,
+                    destination_mint,
+                    destination_token_program,
+                    trim_account,
+                    trim_amount,
+                    Some(SA_AUTHORITY_SEED),
+                )?;
+                log_trim_fee_info(trim_amount, &trim_account.key());
+            }
+
+            if charge_amount > 0 {
+                transfer_token_fee(
+                    sa_authority,
+                    destination_token_sa,
+                    destination_mint,
+                    destination_token_program,
+                    charge_account.as_ref().unwrap(),
+                    charge_amount,
+                    Some(SA_AUTHORITY_SEED),
+                )?;
+                log_platform_trim_fee_info(charge_amount, &charge_account.unwrap().key());
+            }
             return Ok(false);
         }
     }
@@ -483,14 +484,8 @@ impl SwapToBProcessor {
                 Some(SA_AUTHORITY_SEED),
             )?;
         } else {
-            require!(
-                destination_token_sa.is_some(),
-                ErrorCode::DestinationTokenSaIsNone
-            );
-            require!(
-                destination_token_program.is_some(),
-                ErrorCode::DestinationTokenProgramIsNone
-            );
+            require!(destination_token_sa.is_some(), ErrorCode::DestinationTokenSaIsNone);
+            require!(destination_token_program.is_some(), ErrorCode::DestinationTokenProgramIsNone);
             let destination_token_sa = destination_token_sa.as_ref().unwrap();
             let destination_token_program = destination_token_program.as_ref().unwrap();
 
@@ -538,10 +533,8 @@ impl<'info> PlatformFeeV3Processor<'info> for SwapToBProcessor {
         destination_token_program: &Option<Interface<'info, TokenInterface>>,
         associated_token_program: &Option<Program<'info, AssociatedToken>>,
         system_program: &Option<Program<'info, System>>,
-    ) -> Result<(
-        InterfaceAccount<'info, TokenAccount>,
-        InterfaceAccount<'info, TokenAccount>,
-    )> {
+    ) -> Result<(InterfaceAccount<'info, TokenAccount>, InterfaceAccount<'info, TokenAccount>)>
+    {
         ProxySwapProcessor.get_swap_accounts(
             payer,
             source_token_account,
@@ -599,10 +592,7 @@ impl<'info> PlatformFeeV3Processor<'info> for SwapToBProcessor {
             if is_charge_fee {
                 require!(sa_authority.is_some(), ErrorCode::SaAuthorityIsNone);
                 let sa_authority = sa_authority.as_ref().unwrap();
-                require!(
-                    sa_authority.key() == authority_pda::ID,
-                    ErrorCode::InvalidSaAuthority
-                );
+                require!(sa_authority.key() == authority_pda::ID, ErrorCode::InvalidSaAuthority);
                 let total_fee = commission_amount
                     .checked_add(platform_fee_amount)
                     .ok_or(ErrorCode::CalculationError)?;
@@ -660,19 +650,28 @@ impl<'info> PlatformFeeV3Processor<'info> for SwapToBProcessor {
         platform_fee_rate: Option<u16>,
         platform_fee_account: &Option<AccountInfo<'info>>,
         trim_rate: Option<u8>,
+        charge_rate: Option<u16>,
         trim_account: Option<&AccountInfo<'info>>,
+        charge_account: Option<&AccountInfo<'info>>,
         acc_close_flag: bool,
     ) -> Result<u64> {
         // Calculate fees and actual amount out if commission is applied to to
-        let (commission_amount, platform_fee_amount, trim_amount, actual_amount_out, is_charge_fee) =
-            self.calculate_to_fees(
-                amount_out,
-                expected_amount_out,
-                commission_rate,
-                commission_direction,
-                platform_fee_rate,
-                trim_rate,
-            )?;
+        let (
+            commission_amount,
+            platform_fee_amount,
+            trim_amount,
+            charge_amount,
+            actual_amount_out,
+            is_charge_fee,
+        ) = self.calculate_to_fees(
+            amount_out,
+            expected_amount_out,
+            commission_rate,
+            commission_direction,
+            platform_fee_rate,
+            trim_rate,
+            charge_rate,
+        )?;
 
         // Proxy handle after swap
         if !is_charge_fee {
@@ -698,10 +697,7 @@ impl<'info> PlatformFeeV3Processor<'info> for SwapToBProcessor {
                     destination_token_account.to_account_info(),
                     payer.to_account_info(),
                     payer.to_account_info(),
-                    destination_token_program
-                        .as_ref()
-                        .unwrap()
-                        .to_account_info(),
+                    destination_token_program.as_ref().unwrap().to_account_info(),
                     None,
                 )?
             }
@@ -734,7 +730,9 @@ impl<'info> PlatformFeeV3Processor<'info> for SwapToBProcessor {
                 destination_token_program,
                 amount_out,
                 trim_amount,
+                charge_amount,
                 trim_account,
+                charge_account,
                 is_unwrap_wsol_to_sa,
                 acc_close_flag,
             )?;

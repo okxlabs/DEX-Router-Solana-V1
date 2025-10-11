@@ -93,13 +93,8 @@ pub fn platform_fee_wrap_unwrap_handler_v3<'a>(
     ctx: Context<'_, '_, 'a, 'a, PlatformFeeWrapUnwrapAccounts<'a>>,
     args: PlatformFeeWrapUnwrapArgs,
 ) -> Result<()> {
-    let PlatformFeeWrapUnwrapArgs {
-        order_id,
-        amount_in,
-        commission_info,
-        platform_fee_rate,
-        tob,
-    } = args;
+    let PlatformFeeWrapUnwrapArgs { order_id, amount_in, commission_info, platform_fee_rate, tob } =
+        args;
 
     // Validate input
     require!(amount_in > 0, ErrorCode::AmountInMustBeGreaterThanZero);
@@ -213,19 +208,10 @@ pub fn wrap_process_v3<'info>(
     token_program: Interface<'info, TokenInterface>,
 ) -> Result<()> {
     // Transfer SOL to WSOL account
-    transfer_sol(
-        payer.to_account_info(),
-        wsol_account.to_account_info(),
-        amount,
-        None,
-    )?;
+    transfer_sol(payer.to_account_info(), wsol_account.to_account_info(), amount, None)?;
 
     // Sync WSOL account to reflect the transferred SOL
-    sync_wsol_account(
-        wsol_account.to_account_info(),
-        token_program.to_account_info(),
-        None,
-    )?;
+    sync_wsol_account(wsol_account.to_account_info(), token_program.to_account_info(), None)?;
 
     Ok(())
 }
@@ -287,13 +273,7 @@ fn log_wrap_unwrap_initial_info<'info>(
 ) -> Result<(Pubkey, Pubkey, u64, u64)> {
     let (source_mint, destination_mint) = get_wrap_unwrap_mints(wrap_direction);
 
-    log_swap_basic_info(
-        order_id,
-        &source_mint,
-        &destination_mint,
-        &payer.key(),
-        &payer.key(),
-    );
+    log_swap_basic_info(order_id, &source_mint, &destination_mint, &payer.key(), &payer.key());
 
     let sol_balance = payer.lamports();
     let wsol_balance = payer_wsol_account.amount;
@@ -314,12 +294,7 @@ fn log_wrap_unwrap_initial_info<'info>(
         amount_in,
     );
 
-    Ok((
-        source_mint,
-        destination_mint,
-        before_source_balance,
-        before_destination_balance,
-    ))
+    Ok((source_mint, destination_mint, before_source_balance, before_destination_balance))
 }
 
 /// Log wrap/unwrap final information and calculate changes
@@ -378,16 +353,10 @@ fn transfer_wrap_unwrap_fees_and_log<'info>(
 ) -> Result<()> {
     // Validate accounts before transfer
     if commission_amount > 0 {
-        require!(
-            commission_account.is_some(),
-            ErrorCode::CommissionAccountIsNone
-        );
+        require!(commission_account.is_some(), ErrorCode::CommissionAccountIsNone);
     }
     if platform_fee_amount > 0 {
-        require!(
-            platform_fee_account.is_some(),
-            ErrorCode::PlatformFeeAccountIsNone
-        );
+        require!(platform_fee_account.is_some(), ErrorCode::PlatformFeeAccountIsNone);
     }
 
     if commission_info.is_charge_sol() {
@@ -436,9 +405,8 @@ fn transfer_sol_fees<'info>(
 ) -> Result<()> {
     if tob {
         // TOB mode: require authority_pda
-        let authority_pda = authority_pda_account
-            .as_ref()
-            .ok_or(ErrorCode::TobAuthorityPdaRequired)?;
+        let authority_pda =
+            authority_pda_account.as_ref().ok_or(ErrorCode::TobAuthorityPdaRequired)?;
 
         // TOB mode: two-step transfer
         // Step 1: payer → authority_pda (normal transfer, not fee)
@@ -514,12 +482,9 @@ fn transfer_token_fees<'info>(
 ) -> Result<()> {
     if tob {
         // TOB mode: require both accounts
-        let authority_pda = authority_pda_account
-            .as_ref()
-            .ok_or(ErrorCode::TobAuthorityPdaRequired)?;
-        let wsol_sa = wsol_sa_account
-            .as_ref()
-            .ok_or(ErrorCode::TobWsolSaRequired)?;
+        let authority_pda =
+            authority_pda_account.as_ref().ok_or(ErrorCode::TobAuthorityPdaRequired)?;
+        let wsol_sa = wsol_sa_account.as_ref().ok_or(ErrorCode::TobWsolSaRequired)?;
 
         // TOB mode: two-step transfer
         // Step 1: payer_wsol_account → wsol_sa (normal transfer, not fee)
@@ -614,21 +579,13 @@ fn validate_tob_accounts<'info>(
     }
 
     // Always need authority_pda in TOB mode
-    let authority = authority_pda_account
-        .as_ref()
-        .ok_or(ErrorCode::TobAuthorityPdaRequired)?;
+    let authority = authority_pda_account.as_ref().ok_or(ErrorCode::TobAuthorityPdaRequired)?;
 
-    require_keys_eq!(
-        authority.key(),
-        authority_pda::id(),
-        ErrorCode::InvalidAuthorityPda
-    );
+    require_keys_eq!(authority.key(), authority_pda::id(), ErrorCode::InvalidAuthorityPda);
 
     // Need wsol_sa only when charging WSOL
     if !is_charge_sol {
-        let wsol_sa = wsol_sa_account
-            .as_ref()
-            .ok_or(ErrorCode::TobWsolSaRequired)?;
+        let wsol_sa = wsol_sa_account.as_ref().ok_or(ErrorCode::TobWsolSaRequired)?;
 
         require_keys_eq!(wsol_sa.key(), wsol_sa::id(), ErrorCode::InvalidWsolSa);
     }

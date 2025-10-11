@@ -5,7 +5,7 @@ use arrayref::array_ref;
 
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{pancake_swap_v3_program, HopAccounts, SWAP_SELECTOR, SWAP_V2_SELECTOR, ZERO_ADDRESS};
+use crate::{HopAccounts, SWAP_SELECTOR, SWAP_V2_SELECTOR, ZERO_ADDRESS, pancake_swap_v3_program};
 
 use super::common::DexProcessor;
 
@@ -73,7 +73,8 @@ impl<'info> PancakeSwapV3SwapAccounts<'info> {
             ex_bitmap,
             tick_array1,
             tick_array2,
-        ]: & [AccountInfo<'info>; SWAP_ACCOUNTS_LEN] = array_ref![accounts, offset, SWAP_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; SWAP_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, SWAP_ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -115,7 +116,8 @@ impl<'info> PancakeSwapV3SwapV2Accounts<'info> {
             tick_array0,
             tick_array1,
             tick_array2,
-        ]: & [AccountInfo<'info>; SWAP_V2_ACCOUNTS_LEN] = array_ref![accounts, offset, SWAP_V2_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; SWAP_V2_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, SWAP_V2_ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -149,11 +151,7 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::PancakeSwapV3Swap amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::PancakeSwapV3Swap amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + SWAP_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -230,11 +228,8 @@ pub fn swap<'a>(
         account_infos.push(swap_accounts.tick_array2.to_account_info());
     }
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &PancakeSwapV3Processor;
     let amount_out = invoke_process(
@@ -264,11 +259,7 @@ pub fn swap_v2<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::PancakeSwapV3SwapV2 amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::PancakeSwapV3SwapV2 amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + SWAP_V2_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -354,11 +345,8 @@ pub fn swap_v2<'a>(
         account_infos.push(swap_accounts.tick_array2.to_account_info());
     }
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &PancakeSwapV3Processor;
     let amount_out = invoke_process(

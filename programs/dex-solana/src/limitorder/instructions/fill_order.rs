@@ -3,7 +3,7 @@ use crate::error::LimitOrderError;
 use crate::processor::proxy_swap_processor::ProxySwapProcessor;
 use crate::state::{config::*, event::*, order::*};
 use crate::utils::*;
-use crate::{common_swap, SwapArgs};
+use crate::{SwapArgs, common_swap};
 use anchor_lang::{prelude::*, solana_program::clock::Clock, solana_program::sysvar};
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
@@ -126,11 +126,7 @@ pub fn fill_order_by_resolver_handler<'a>(
     //     LimitOrderError::InvalidAmountIn
     // );
     let escrow_token_amount = ctx.accounts.escrow_token_account.amount;
-    msg!(
-        "FillOrder amount_in: {}, escrow_token_amount: {}",
-        args.amount_in,
-        escrow_token_amount
-    );
+    msg!("FillOrder amount_in: {}, escrow_token_amount: {}", args.amount_in, escrow_token_amount);
     // update on 2025-05-23: fix tax token issue end
 
     let payer = ctx.accounts.payer.key();
@@ -183,10 +179,7 @@ pub fn fill_order_by_resolver_handler<'a>(
         );
     } else {
         // Owner is maker, support other toToken
-        require!(
-            output_token_account.owner == maker,
-            LimitOrderError::InvalidOutputTokenOwner
-        );
+        require!(output_token_account.owner == maker, LimitOrderError::InvalidOutputTokenOwner);
     }
 
     // Reset swap args
@@ -232,11 +225,7 @@ pub fn fill_order_by_resolver_handler<'a>(
     }
 
     // Harvest the transfer fee if it exists
-    if get_transfer_fee(
-        &ctx.accounts.input_token_mint.to_account_info(),
-        args.amount_in,
-    )? > 0
-    {
+    if get_transfer_fee(&ctx.accounts.input_token_mint.to_account_info(), args.amount_in)? > 0 {
         harvest_withheld_tokens_to_mint(
             ctx.accounts.input_token_program.to_account_info(),
             ctx.accounts.input_token_mint.to_account_info(),
@@ -294,12 +283,7 @@ fn handle_sol_output<'info>(
         None,
     )?;
     // Transfer sol to maker
-    transfer_sol(
-        payer.to_account_info(),
-        maker.to_account_info(),
-        amount,
-        None,
-    )?;
+    transfer_sol(payer.to_account_info(), maker.to_account_info(), amount, None)?;
     msg!("Transfer sol to maker: {}", amount);
     Ok(())
 }

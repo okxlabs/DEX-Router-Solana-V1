@@ -8,8 +8,9 @@ use arrayref::array_ref;
 
 use crate::error::ErrorCode;
 use crate::{
+    HopAccounts, STABBLE_SWAP_SELECTOR,
     adapters::common::{before_check, invoke_process},
-    stabble_stable_program, stabble_weighted_program, HopAccounts, STABBLE_SWAP_SELECTOR,
+    stabble_stable_program, stabble_weighted_program,
 };
 
 use super::common::DexProcessor;
@@ -57,7 +58,8 @@ impl<'info> StabbleSwapAccounts<'info> {
             vault_program,
             token_program,
             token_2022_program,
-        ]: &[AccountInfo<'info>; SWAP_ACCOUNTS_LEN] = array_ref![accounts, offset, SWAP_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; SWAP_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, SWAP_ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -68,12 +70,12 @@ impl<'info> StabbleSwapAccounts<'info> {
             mint_out: InterfaceAccount::try_from(mint_out)?,
             vault_token_in: InterfaceAccount::try_from(vault_token_in)?,
             vault_token_out: InterfaceAccount::try_from(vault_token_out)?,
-            beneficiary_token_out: beneficiary_token_out,
-            pool_token_in: pool_token_in,
-            withdraw_authority: withdraw_authority,
-            vault: vault,
-            vault_authority: vault_authority,
-            vault_program: vault_program,
+            beneficiary_token_out,
+            pool_token_in,
+            withdraw_authority,
+            vault,
+            vault_authority,
+            vault_program,
             token_program: Program::try_from(token_program)?,
             token_2022_program: Program::try_from(token_2022_program)?,
         })
@@ -92,11 +94,7 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::StabbleSwap amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::StabbleSwap amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + SWAP_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -162,11 +160,8 @@ pub fn swap<'a>(
         swap_accounts.token_2022_program.to_account_info(),
     ];
 
-    let instruction: Instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction: Instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &StabbleSwapProcessor;
     let amount_out = invoke_process(

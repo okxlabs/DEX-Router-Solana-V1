@@ -17,14 +17,9 @@ pub trait PlatformFeeV3Processor<'info> {
         _destination_token_program: &Option<Interface<'info, TokenInterface>>,
         _associated_token_program: &Option<Program<'info, AssociatedToken>>,
         _system_program: &Option<Program<'info, System>>,
-    ) -> Result<(
-        InterfaceAccount<'info, TokenAccount>,
-        InterfaceAccount<'info, TokenAccount>,
-    )> {
-        Ok((
-            _source_token_account.clone(),
-            _destination_token_account.clone(),
-        ))
+    ) -> Result<(InterfaceAccount<'info, TokenAccount>, InterfaceAccount<'info, TokenAccount>)>
+    {
+        Ok((_source_token_account.clone(), _destination_token_account.clone()))
     }
 
     fn before_swap(
@@ -66,7 +61,9 @@ pub trait PlatformFeeV3Processor<'info> {
         _platform_fee_account: &Option<AccountInfo<'info>>,
         // TRIM
         _trim_rate: Option<u8>,
+        _charge_rate: Option<u16>,
         _trim_account: Option<&AccountInfo<'info>>,
+        _charge_account: Option<&AccountInfo<'info>>,
         _acc_close_flag: bool,
     ) -> Result<u64> {
         Ok(_amount_out)

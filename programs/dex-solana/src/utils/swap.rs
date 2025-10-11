@@ -23,10 +23,8 @@ impl<'info> CommonSwapProcessor<'info> for FillOrderSwapProcessor {
         destination_token_program: &Option<Interface<'info, TokenInterface>>,
         associated_token_program: &Option<Program<'info, AssociatedToken>>,
         system_program: &Option<Program<'info, System>>,
-    ) -> Result<(
-        InterfaceAccount<'info, TokenAccount>,
-        InterfaceAccount<'info, TokenAccount>,
-    )> {
+    ) -> Result<(InterfaceAccount<'info, TokenAccount>, InterfaceAccount<'info, TokenAccount>)>
+    {
         let source_account = create_sa_if_needed(
             payer,
             source_mint,
@@ -106,9 +104,8 @@ impl<'info> CommonSwapProcessor<'info> for FillOrderSwapProcessor {
                 owner_seeds,
             )?;
 
-            real_amount_in = amount_in
-                .checked_sub(fee_amount)
-                .ok_or(LimitOrderError::MathOverflow)?
+            real_amount_in =
+                amount_in.checked_sub(fee_amount).ok_or(LimitOrderError::MathOverflow)?
         };
 
         // Transfer token to source token sa
@@ -183,9 +180,8 @@ impl<'info> CommonSwapProcessor<'info> for FillOrderSwapProcessor {
                 owner_seeds,
             )?;
 
-            real_amount_out = amount_out
-                .checked_sub(fee_amount)
-                .ok_or(LimitOrderError::MathOverflow)?
+            real_amount_out =
+                amount_out.checked_sub(fee_amount).ok_or(LimitOrderError::MathOverflow)?
         };
 
         transfer_token(

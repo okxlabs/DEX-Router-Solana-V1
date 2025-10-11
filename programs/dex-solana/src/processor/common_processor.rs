@@ -17,14 +17,9 @@ pub trait CommonSwapProcessor<'info> {
         _destination_token_program: &Option<Interface<'info, TokenInterface>>,
         _associated_token_program: &Option<Program<'info, AssociatedToken>>,
         _system_program: &Option<Program<'info, System>>,
-    ) -> Result<(
-        InterfaceAccount<'info, TokenAccount>,
-        InterfaceAccount<'info, TokenAccount>,
-    )> {
-        Ok((
-            _source_token_account.clone(),
-            _destination_token_account.clone(),
-        ))
+    ) -> Result<(InterfaceAccount<'info, TokenAccount>, InterfaceAccount<'info, TokenAccount>)>
+    {
+        Ok((_source_token_account.clone(), _destination_token_account.clone()))
     }
 
     fn before_swap(

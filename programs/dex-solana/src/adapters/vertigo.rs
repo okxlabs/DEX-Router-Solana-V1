@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{vertigo_program, HopAccounts, VERTIGO_BUY_SELECTOR, VERTIGO_SELL_SELECTOR};
+use crate::{HopAccounts, VERTIGO_BUY_SELECTOR, VERTIGO_SELL_SELECTOR, vertigo_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use arrayref::array_ref;
@@ -42,7 +42,7 @@ impl<'info> VertigoSwapAccounts<'info> {
             vault_b,
             token_program_a,
             token_program_b,
-            system_program
+            system_program,
         ]: &[AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
@@ -76,10 +76,7 @@ pub fn buy<'a>(
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
     msg!("Dex::Vertigo amount_in: {}, offset: {}", amount_in, offset);
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
 
     let mut swap_accounts = VertigoSwapAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &vertigo_program::id() {
@@ -135,11 +132,8 @@ pub fn buy<'a>(
         swap_accounts.dex_program_id.to_account_info(),
     ];
 
-    let instruction: Instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction: Instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &VertigoProcessor;
     let amount_out = invoke_process(
@@ -171,10 +165,7 @@ pub fn sell<'a>(
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
     msg!("Dex::Vertigo amount_in: {}, offset: {}", amount_in, offset);
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
 
     let mut swap_accounts = VertigoSwapAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &vertigo_program::id() {
@@ -230,11 +221,8 @@ pub fn sell<'a>(
         swap_accounts.dex_program_id.to_account_info(),
     ];
 
-    let instruction: Instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction: Instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &VertigoProcessor;
     let amount_out = invoke_process(

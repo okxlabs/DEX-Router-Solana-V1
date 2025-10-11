@@ -44,6 +44,8 @@ pub const HEAVEN_SELL_SELECTOR: &[u8; 8] = &[51, 230, 133, 164, 1, 127, 131, 173
 
 pub const PUMPFUN_BUY_SELECTOR: &[u8; 8] = &[102, 6, 61, 18, 1, 218, 235, 234];
 pub const PUMPFUN_SELL_SELECTOR: &[u8; 8] = &[51, 230, 133, 164, 1, 127, 131, 173];
+pub const MOONIT_BUY_SELECTOR: &[u8; 8] = &[102, 6, 61, 18, 1, 218, 235, 234];
+pub const MOONIT_SELL_SELECTOR: &[u8; 8] = &[51, 230, 133, 164, 1, 127, 131, 173];
 pub const STABBLE_SWAP_SELECTOR: &[u8; 8] = &[43, 4, 237, 11, 26, 201, 30, 98];
 pub const DEPOSIT_SELECTOR: &[u8; 8] = &[242, 35, 198, 137, 82, 225, 242, 182];
 pub const WITHDRAW_SELECTOR: &[u8; 8] = &[183, 18, 70, 156, 148, 109, 161, 34];
@@ -52,24 +54,31 @@ pub const WOOFI_SWAP_SELECTOR: &[u8; 8] = &[248, 198, 158, 145, 225, 117, 135, 2
 pub const VIRTUALS_BUY_SELECTOR: &[u8; 8] = &[102, 6, 61, 18, 1, 218, 235, 234];
 pub const VIRTUALS_SELL_SELECTOR: &[u8; 8] = &[51, 230, 133, 164, 1, 127, 131, 173];
 pub const PERPETUALS_ADDLIQ_SELECTOR: &[u8; 8] = &[0xe4, 0xa2, 0x4e, 0x1c, 0x46, 0xdb, 0x74, 0x73];
-pub const PERPETUALS_REMOVELIQ_SELECTOR: &[u8; 8] = &[0xe6, 0xd7, 0x52, 0x7f, 0xf1, 0x65, 0xe3, 0x92];
+pub const PERPETUALS_REMOVELIQ_SELECTOR: &[u8; 8] =
+    &[0xe6, 0xd7, 0x52, 0x7f, 0xf1, 0x65, 0xe3, 0x92];
 pub const PERPETUALS_SWAP_SELECTOR: &[u8; 8] = &[0x41, 0x4b, 0x3f, 0x4c, 0xeb, 0x5b, 0x5b, 0x88];
-pub const RAYDIUM_LAUNCHPAD_BUY_SELECTOR: &[u8; 8] = &[250, 234, 13, 123, 213, 156, 19, 236];
-pub const RAYDIUM_LAUNCHPAD_SELL_SELECTOR: &[u8; 8] = &[149, 39, 222, 155, 211, 124, 152, 26];
+pub const BUY_EXACT_IN_SELECTOR: &[u8; 8] = &[250, 234, 13, 123, 213, 156, 19, 236];
+pub const SELL_EXACT_IN_SELECTOR: &[u8; 8] = &[149, 39, 222, 155, 211, 124, 152, 26];
 pub const VERTIGO_BUY_SELECTOR: &[u8; 8] = &[102, 6, 61, 18, 1, 218, 235, 234];
 pub const VERTIGO_SELL_SELECTOR: &[u8; 8] = &[51, 230, 133, 164, 1, 127, 131, 173];
 pub const BOOPFUN_BUY_SELECTOR: &[u8; 8] = &[138, 127, 14, 91, 38, 87, 115, 105];
 pub const BOOPFUN_SELL_SELECTOR: &[u8; 8] = &[109, 61, 40, 187, 230, 176, 135, 174];
 pub const GAMMA_ORACLE_SWAP_SELECTOR: &[u8; 8] = &[239, 82, 192, 187, 160, 26, 223, 223];
-pub const SABER_DECIMAL_DEPOSIT_SELECTOR: &[u8; 8] = &[0xf2, 0x23, 0xc6, 0x89, 0x52, 0xe1, 0xf2, 0xb6];
-pub const SABER_DECIMAL_WITHDRAW_SELECTOR: &[u8; 8] = &[0xb7, 0x12, 0x46, 0x9c, 0x94, 0x6d, 0xa1, 0x22];
+pub const SABER_DECIMAL_DEPOSIT_SELECTOR: &[u8; 8] =
+    &[0xf2, 0x23, 0xc6, 0x89, 0x52, 0xe1, 0xf2, 0xb6];
+pub const SABER_DECIMAL_WITHDRAW_SELECTOR: &[u8; 8] =
+    &[0xb7, 0x12, 0x46, 0x9c, 0x94, 0x6d, 0xa1, 0x22];
 pub const ONE_DEX_SWAP_SELECTOR: &[u8; 8] = &[8, 151, 245, 76, 172, 203, 144, 39];
 pub const MANIFEST_SWAP_SELECTOR: &[u8; 1] = &[4];
 pub const TESSERA_SWAP_SELECTOR: &[u8; 1] = &[16];
 pub const SOL_RFQ_FILL_ORDER_SELECTOR: &[u8; 8] = &[232, 122, 115, 25, 199, 143, 136, 162];
+pub const GOONFI_SWAP_SELECTOR: &[u8; 1] = &[2];
 
 pub const HUMIDIFI_SWAP_SELECTOR: u8 = 0x4;
-const HUMIDIFI_IX_DATA_KEY_SEED: [u8; 32] = [58, 255, 47, 255, 226, 186, 235, 195, 123, 131, 245, 8, 11, 233, 132, 219, 225, 40, 79, 119, 169, 121, 169, 58, 197, 1, 122, 9, 216, 164, 149, 97];
+const HUMIDIFI_IX_DATA_KEY_SEED: [u8; 32] = [
+    58, 255, 47, 255, 226, 186, 235, 195, 123, 131, 245, 8, 11, 233, 132, 219, 225, 40, 79, 119,
+    169, 121, 169, 58, 197, 1, 122, 9, 216, 164, 149, 97,
+];
 pub const HUMIDIFI_IX_DATA_KEY: u64 = u64::from_le_bytes([
     HUMIDIFI_IX_DATA_KEY_SEED[0],
     HUMIDIFI_IX_DATA_KEY_SEED[1],
@@ -91,22 +100,52 @@ pub const ORDER_MIN_RENT: u64 = 3563520; //needs to be changed when order accoun
 pub const DEFAULT_COMPUTE_UNIT_LIMIT: u32 = 200_000;
 pub const FEE_MULTIPLIER_DENOMINATOR: u64 = 10;
 
+#[cfg(feature = "staging")]
+pub mod authority_pda {
+    use anchor_lang::declare_id;
+    declare_id!("4DwLmWvMyWPPKa8jhmW6AZKGctUMe7GxAWrb2Wcw8ZUa"); //pre_deploy
+}
+
+#[cfg(not(feature = "staging"))]
 pub mod authority_pda {
     use anchor_lang::declare_id;
     declare_id!("HV1KXxWFaSeriyFvXyx48FqG9BoFbfinB8njCJonqP7K");
-    // declare_id!("4DwLmWvMyWPPKa8jhmW6AZKGctUMe7GxAWrb2Wcw8ZUa"); //pre_deploy
 }
 
+#[cfg(feature = "staging")]
+pub mod okx_bridge_program {
+    use anchor_lang::declare_id;
+    declare_id!("preMfqJcNX4xdbGz7LGaNiUj9Ej5Qg2a4ymfbuG5R5k"); //pre_deploy
+}
+
+#[cfg(not(feature = "staging"))]
 pub mod okx_bridge_program {
     use anchor_lang::declare_id;
     declare_id!("okxBd18urPbBi2vsExxUDArzQNcju2DugV9Mt46BxYE");
-    // declare_id!("preMfqJcNX4xdbGz7LGaNiUj9Ej5Qg2a4ymfbuG5R5k"); //pre_deploy
 }
 
+#[cfg(feature = "staging")]
+pub mod wsol_sa {
+    use anchor_lang::declare_id;
+    declare_id!("5RWt14cufVyp4URS5hfoCczqSATxFH4AW6XAN8yyJtTg"); //pre_deploy
+}
+
+#[cfg(not(feature = "staging"))]
 pub mod wsol_sa {
     use anchor_lang::declare_id;
     declare_id!("2rikd7tzPbmowhUJzPNVtX7fuUGcnBa8jqJnx6HbtHeE");
-    // declare_id!("5RWt14cufVyp4URS5hfoCczqSATxFH4AW6XAN8yyJtTg"); //pre_deploy
+}
+
+#[cfg(feature = "staging")]
+pub mod sol_rfq_program {
+    use anchor_lang::declare_id;
+    declare_id!("preNqJotnzt2tUaeGX4FsQEU3dUsopsraZHVwNUwUAZ"); //pre_deploy
+}
+
+#[cfg(not(feature = "staging"))]
+pub mod sol_rfq_program {
+    use anchor_lang::declare_id;
+    declare_id!("RFQ1uATMXfRXemLnbYCF8JZhVfELp2K53jSEAGbsAKX");
 }
 
 pub mod claim_authority {
@@ -336,7 +375,7 @@ pub mod price_update_solusd {
 pub mod vertigo_program {
     use anchor_lang::declare_id;
     declare_id!("vrTGoBuy5rYSxAfV3jaRJWHH6nN9WK4NRExGxsk1bCJ"); // mainnet
-                                                                // declare_id!("AVY2KtGjkHE4J93A1y9Ds6RekC3kTKasgazEeDXB4DXX");     // devnet
+    // declare_id!("AVY2KtGjkHE4J93A1y9Ds6RekC3kTKasgazEeDXB4DXX");     // devnet
 }
 
 pub mod perpetuals_program {
@@ -352,11 +391,6 @@ pub mod raydium_launchpad_program {
 pub mod woofi_program {
     use anchor_lang::declare_id;
     declare_id!("WooFif76YGRNjk1pA8wCsN67aQsD9f9iLsz4NcJ1AVb");
-}
-
-pub mod letsbonk_platform_config {
-    use anchor_lang::declare_id;
-    declare_id!("FfYek5vEz23cMkWsdJwG2oa6EphsvXSHrGpdALN4g6W1");
 }
 
 pub mod meteora_dbc_program {
@@ -425,11 +459,6 @@ pub mod tessera_program {
     declare_id!("TessVdML9pBGgG9yGks7o4HewRaXVAMuoVj4x83GLQH");
 }
 
-pub mod sol_rfq_program {
-    use anchor_lang::declare_id;
-    declare_id!("preNqJotnzt2tUaeGX4FsQEU3dUsopsraZHVwNUwUAZ");
-}
-
 pub mod humidifi_program {
     use anchor_lang::declare_id;
     declare_id!("9H6tua7jkLhdm3w8BvgpTn5LZNU7g4ZynDmCiNN3q6Rp");
@@ -438,4 +467,23 @@ pub mod humidifi_program {
 pub mod heaven_program {
     use anchor_lang::declare_id;
     declare_id!("HEAVENoP2qxoeuF8Dj2oT1GHEnu49U5mJYkdeC8BAX2o");
+}
+
+pub mod goonfi_program {
+    use anchor_lang::declare_id;
+    declare_id!("goonERTdGsjnkZqWuVjs73BZ3Pb9qoCUdBUL17BnS5j");
+}
+pub mod moonit_program {
+    use anchor_lang::declare_id;
+    declare_id!("MoonCVVNZFSYkqNXP6bxHLPL6QQJiMagDL3qcqUQTrG");
+}
+
+pub mod swaap_program {
+    use anchor_lang::declare_id;
+    declare_id!("5FyWAoG8V6hxgY6XM9hZStNxSW4D6mkv8HmYrxuPPDhv");
+}
+
+pub mod sugar_money_program {
+    use anchor_lang::declare_id;
+    declare_id!("deus4Bvftd5QKcEkE5muQaWGWDoma8GrySvPFrBPjhS");
 }

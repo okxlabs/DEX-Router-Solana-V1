@@ -1,6 +1,6 @@
 use crate::constants::{ACTUAL_IN_LOWER_BOUND_DEN, ACTUAL_IN_LOWER_BOUND_NUM};
 use crate::error::ErrorCode;
-use crate::{authority_pda, HopAccounts, SA_AUTHORITY_SEED, ZERO_ADDRESS};
+use crate::{HopAccounts, SA_AUTHORITY_SEED, ZERO_ADDRESS, authority_pda};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::{
@@ -65,10 +65,7 @@ pub fn before_check(
     );
     if !proxy_swap && hop == 0 {
         if owner_seeds.is_none() {
-            require!(
-                swap_authority_pubkey.is_signer,
-                ErrorCode::SwapAuthorityIsNotSigner
-            );
+            require!(swap_authority_pubkey.is_signer, ErrorCode::SwapAuthorityIsNotSigner);
         }
     } else {
         require_keys_eq!(
@@ -113,12 +110,7 @@ pub fn invoke_process<'info, T: DexProcessor>(
     execute_instruction(&instruction, account_infos, proxy_swap, hop, owner_seeds)?;
 
     // after invoke hook
-    dex_processor.after_invoke(
-        account_infos,
-        hop,
-        owner_seeds,
-        before_sa_authority_lamports,
-    )?;
+    dex_processor.after_invoke(account_infos, hop, owner_seeds, before_sa_authority_lamports)?;
 
     // post swap check
     post_swap_check(
@@ -148,20 +140,14 @@ pub fn invoke_processes<'info, T: DexProcessor>(
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
     // check accounts length
-    require!(
-        account_infos_arr.len() == instructions.len(),
-        ErrorCode::InvalidBundleInput
-    );
+    require!(account_infos_arr.len() == instructions.len(), ErrorCode::InvalidBundleInput);
 
     // get before balances
     let before_source_balance = swap_source_token.amount;
     let before_destination_balance = swap_destination_token.amount;
 
-    let account_infos: Vec<_> = account_infos_arr
-        .iter()
-        .flat_map(|inner| inner.iter())
-        .cloned()
-        .collect();
+    let account_infos: Vec<_> =
+        account_infos_arr.iter().flat_map(|inner| inner.iter()).cloned().collect();
 
     // before invoke hook
     let before_sa_authority_lamports = dex_processor.before_invoke(&account_infos)?;
@@ -174,22 +160,11 @@ pub fn invoke_processes<'info, T: DexProcessor>(
                 &[swap_source_token.key(), swap_destination_token.key()],
             )?;
         }
-        execute_instruction(
-            &instructions[i],
-            account_infos_arr[i],
-            proxy_swap,
-            hop,
-            owner_seeds,
-        )?;
+        execute_instruction(&instructions[i], account_infos_arr[i], proxy_swap, hop, owner_seeds)?;
     }
 
     // after invoke hook
-    dex_processor.after_invoke(
-        &account_infos,
-        hop,
-        owner_seeds,
-        before_sa_authority_lamports,
-    )?;
+    dex_processor.after_invoke(&account_infos, hop, owner_seeds, before_sa_authority_lamports)?;
 
     // post swap check
     post_swap_check(
@@ -267,10 +242,7 @@ fn post_swap_check<'info>(
     let actual_amount_out = after_destination_balance
         .checked_sub(before_destination_balance)
         .ok_or(ErrorCode::CalculationError)?;
-    require!(
-        actual_amount_out > 0,
-        ErrorCode::AmountOutMustBeGreaterThanZero
-    );
+    require!(actual_amount_out > 0, ErrorCode::AmountOutMustBeGreaterThanZero);
 
     // 3. update offset & hop accounts
     *offset += accounts_len;

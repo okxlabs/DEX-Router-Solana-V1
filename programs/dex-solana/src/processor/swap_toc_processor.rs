@@ -94,16 +94,10 @@ impl SwapToCProcessor {
             return Ok(());
         }
         if commission_amount > 0 {
-            require!(
-                commission_account.is_some(),
-                ErrorCode::CommissionAccountIsNone
-            );
+            require!(commission_account.is_some(), ErrorCode::CommissionAccountIsNone);
         }
         if platform_fee_amount > 0 {
-            require!(
-                platform_fee_account.is_some(),
-                ErrorCode::PlatformFeeAccountIsNone
-            );
+            require!(platform_fee_account.is_some(), ErrorCode::PlatformFeeAccountIsNone);
         }
 
         if is_charge_sol(commission_account, platform_fee_account, source_mint) {
@@ -124,10 +118,7 @@ impl SwapToCProcessor {
                 log_platform_fee_info(actual_fee_amount, &platform_fee_account.key());
             }
         } else {
-            require!(
-                source_token_program.is_some(),
-                ErrorCode::SourceTokenProgramIsNone
-            );
+            require!(source_token_program.is_some(), ErrorCode::SourceTokenProgramIsNone);
             let source_token_program = source_token_program.as_ref().unwrap();
 
             // Transfer token commission
@@ -182,21 +173,12 @@ impl SwapToCProcessor {
             return Ok(());
         }
         if commission_amount > 0 {
-            require!(
-                commission_account.is_some(),
-                ErrorCode::CommissionAccountIsNone
-            );
+            require!(commission_account.is_some(), ErrorCode::CommissionAccountIsNone);
         }
         if platform_fee_amount > 0 {
-            require!(
-                platform_fee_account.is_some(),
-                ErrorCode::PlatformFeeAccountIsNone
-            );
+            require!(platform_fee_account.is_some(), ErrorCode::PlatformFeeAccountIsNone);
         }
-        require!(
-            destination_token_program.is_some(),
-            ErrorCode::DestinationTokenProgramIsNone
-        );
+        require!(destination_token_program.is_some(), ErrorCode::DestinationTokenProgramIsNone);
         let destination_token_program = destination_token_program.as_ref().unwrap();
 
         if is_charge_sol(commission_account, platform_fee_account, destination_mint) {
@@ -278,10 +260,8 @@ impl<'info> PlatformFeeV3Processor<'info> for SwapToCProcessor {
         destination_token_program: &Option<Interface<'info, TokenInterface>>,
         associated_token_program: &Option<Program<'info, AssociatedToken>>,
         system_program: &Option<Program<'info, System>>,
-    ) -> Result<(
-        InterfaceAccount<'info, TokenAccount>,
-        InterfaceAccount<'info, TokenAccount>,
-    )> {
+    ) -> Result<(InterfaceAccount<'info, TokenAccount>, InterfaceAccount<'info, TokenAccount>)>
+    {
         ProxySwapProcessor.get_swap_accounts(
             payer,
             source_token_account,
@@ -363,7 +343,9 @@ impl<'info> PlatformFeeV3Processor<'info> for SwapToCProcessor {
         platform_fee_rate: Option<u16>,
         platform_fee_account: &Option<AccountInfo<'info>>,
         _trim_rate: Option<u8>,
+        _charge_rate: Option<u16>,
         _trim_account: Option<&AccountInfo<'info>>,
+        _charge_account: Option<&AccountInfo<'info>>,
         _acc_close_flag: bool,
     ) -> Result<u64> {
         // Proxy handle after swap

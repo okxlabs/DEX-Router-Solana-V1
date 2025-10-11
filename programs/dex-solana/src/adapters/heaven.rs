@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{heaven_program, HopAccounts, HEAVEN_BUY_SELECTOR, HEAVEN_SELL_SELECTOR};
+use crate::{HEAVEN_BUY_SELECTOR, HEAVEN_SELL_SELECTOR, HopAccounts, heaven_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token_interface::TokenAccount;
 use arrayref::array_ref;
@@ -40,8 +40,28 @@ const ACCOUNTS_LEN: usize = 20;
 
 impl<'info> HeavenSwapAccounts<'info> {
     fn parse_accounts(accounts: &'info [AccountInfo<'info>], offset: usize) -> Result<Self> {
-        let [dex_program_id, swap_authority_pubkey, swap_source_token, swap_destination_token, token_a_program, token_b_program, associated_token_program, system_program, liquidity_pool_state, user, token_a_mint, token_b_mint, user_token_a_vault, user_token_b_vault, token_a_vault, token_b_vault, protocol_config, instruction_sysvar_account_info, chainlink_program, chainlink_sol_usd_feed] =
-            array_ref![accounts, offset, ACCOUNTS_LEN];
+        let [
+            dex_program_id,
+            swap_authority_pubkey,
+            swap_source_token,
+            swap_destination_token,
+            token_a_program,
+            token_b_program,
+            associated_token_program,
+            system_program,
+            liquidity_pool_state,
+            user,
+            token_a_mint,
+            token_b_mint,
+            user_token_a_vault,
+            user_token_b_vault,
+            token_a_vault,
+            token_b_vault,
+            protocol_config,
+            instruction_sysvar_account_info,
+            chainlink_program,
+            chainlink_sol_usd_feed,
+        ] = array_ref![accounts, offset, ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -79,10 +99,7 @@ pub fn swap_handler<'a>(
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
     msg!("Dex::Heaven amount_in: {}, offset: {}", amount_in, offset);
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
     let mut swap_accounts = HeavenSwapAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &heaven_program::id() {
         return Err(ErrorCode::InvalidProgramId.into());
@@ -101,11 +118,7 @@ pub fn swap_handler<'a>(
     )?;
 
     let mut data = Vec::with_capacity(ARGS_LEN);
-    data.extend_from_slice(if is_buy {
-        HEAVEN_BUY_SELECTOR
-    } else {
-        HEAVEN_SELL_SELECTOR
-    });
+    data.extend_from_slice(if is_buy { HEAVEN_BUY_SELECTOR } else { HEAVEN_SELL_SELECTOR });
     data.extend_from_slice(&amount_in.to_le_bytes()); // amount_in
     data.extend_from_slice(&1u64.to_le_bytes()); // minimum_amount_out
     data.extend_from_slice(&0u32.to_le_bytes()); // encoded_user_defined_event_data
@@ -143,9 +156,7 @@ pub fn swap_handler<'a>(
         swap_accounts.token_a_vault.to_account_info(),
         swap_accounts.token_b_vault.to_account_info(),
         swap_accounts.protocol_config.to_account_info(),
-        swap_accounts
-            .instruction_sysvar_account_info
-            .to_account_info(),
+        swap_accounts.instruction_sysvar_account_info.to_account_info(),
         swap_accounts.chainlink_program.to_account_info(),
         swap_accounts.chainlink_sol_usd_feed.to_account_info(),
     ];

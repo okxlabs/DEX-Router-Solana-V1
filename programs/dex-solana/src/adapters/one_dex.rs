@@ -2,11 +2,12 @@ use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::{token::Token, token_interface::TokenAccount};
 use arrayref::array_ref;
 
-use crate::error::ErrorCode;
 use crate::ONE_DEX_SWAP_SELECTOR;
+use crate::error::ErrorCode;
 use crate::{
+    HopAccounts,
     adapters::common::{before_check, invoke_process},
-    one_dex_program, HopAccounts,
+    one_dex_program,
 };
 
 use super::common::DexProcessor;
@@ -46,20 +47,21 @@ impl<'info> OneDexSwapAccounts<'info> {
             metadata_swap_fee_account,
             referrer_token_account,
             token_program,
-        ]: &[AccountInfo<'info>; SWAP_ACCOUNTS_LEN] = array_ref![accounts, offset, SWAP_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; SWAP_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, SWAP_ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
             swap_source_token: InterfaceAccount::try_from(swap_source_token)?,
             swap_destination_token: InterfaceAccount::try_from(swap_destination_token)?,
-            metadata_state: metadata_state,
-            pool_state: pool_state,
-            pool_auth_pubkey: pool_auth_pubkey,
-            pool_token_in_account: pool_token_in_account,
-            pool_token_out_account: pool_token_out_account,
-            metadata_swap_fee_account: metadata_swap_fee_account,
-            referrer_token_account: referrer_token_account,
+            metadata_state,
+            pool_state,
+            pool_auth_pubkey,
+            pool_token_in_account,
+            pool_token_out_account,
+            metadata_swap_fee_account,
+            referrer_token_account,
             token_program: Program::try_from(token_program)?,
         })
     }
@@ -77,11 +79,7 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::OneDexSwap amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::OneDexSwap amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + SWAP_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -135,11 +133,8 @@ pub fn swap<'a>(
         swap_accounts.referrer_token_account.to_account_info(),
         swap_accounts.token_program.to_account_info(),
     ];
-    let instruction: Instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction: Instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &OneDexSwapProcessor;
     let amount_out = invoke_process(

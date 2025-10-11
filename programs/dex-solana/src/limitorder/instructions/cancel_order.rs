@@ -89,10 +89,7 @@ pub fn cancel_order_handler(ctx: Context<CancelOrder>, order_id: u64, tips: u64)
         msg!("CancelOrder by Resolver");
 
         // Check if the resolver is the payer
-        require!(
-            global_config.is_resolver(payer),
-            LimitOrderError::OnlyResolver
-        );
+        require!(global_config.is_resolver(payer), LimitOrderError::OnlyResolver);
 
         // Check if the order has expired
         #[cfg(feature = "check-deadline")]
@@ -122,12 +119,8 @@ pub fn cancel_order_handler(ctx: Context<CancelOrder>, order_id: u64, tips: u64)
     let escrow_token_account = &ctx.accounts.escrow_token_account;
     let amount = escrow_token_account.amount;
 
-    let order_pda_seeds: &[&[&[u8]]] = &[&[
-        ORDER_V1_SEED.as_bytes(),
-        &order_id.to_le_bytes(),
-        maker.as_ref(),
-        &[order.bump],
-    ]];
+    let order_pda_seeds: &[&[&[u8]]] =
+        &[&[ORDER_V1_SEED.as_bytes(), &order_id.to_le_bytes(), maker.as_ref(), &[order.bump]]];
 
     // Transfer the escrow token from the escrow account to the maker
     transfer_token(
@@ -172,17 +165,7 @@ pub fn cancel_order_handler(ctx: Context<CancelOrder>, order_id: u64, tips: u64)
         )?;
     }
 
-    emit_cpi!(RefundEvent {
-        order_id,
-        maker,
-        input_token_mint,
-        amount
-    });
-    emit_cpi!(CancelOrderEvent {
-        order_id,
-        payer,
-        maker,
-        update_ts
-    });
+    emit_cpi!(RefundEvent { order_id, maker, input_token_mint, amount });
+    emit_cpi!(CancelOrderEvent { order_id, payer, maker, update_ts });
     Ok(())
 }

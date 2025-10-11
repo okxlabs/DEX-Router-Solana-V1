@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{numeraire_program, numeraire_usdstar_mint, HopAccounts, SWAP_EXACT_IN_SELECTOR};
+use crate::{HopAccounts, SWAP_EXACT_IN_SELECTOR, numeraire_program, numeraire_usdstar_mint};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::{
     token::Token,
@@ -55,8 +55,8 @@ impl<'info> NumeraireSwapAccounts<'info> {
             pool,
             in_mint: InterfaceAccount::try_from(in_mint)?,
             out_mint: InterfaceAccount::try_from(out_mint)?,
-            in_vault: in_vault,
-            out_vault: out_vault,
+            in_vault,
+            out_vault,
             numeraire_config,
             token_program: Program::try_from(token_program)?,
             token_2022_program: Program::try_from(token_2022_program)?,
@@ -92,15 +92,8 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::Numeraire amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    msg!("Dex::Numeraire amount_in: {}, offset: {}", amount_in, offset);
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
     let mut swap_accounts = NumeraireSwapAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &numeraire_program::id() {
         return Err(ErrorCode::InvalidProgramId.into());
@@ -129,18 +122,10 @@ pub fn swap<'a>(
 
     let in_mint_key = swap_accounts.in_mint.key();
     let out_mint_key = swap_accounts.out_mint.key();
-    let in_index = get_mint_index(
-        &in_mint_key,
-        &pool_pair_0_mint,
-        &pool_pair_1_mint,
-        &pool_pair_2_mint,
-    )?;
-    let out_index = get_mint_index(
-        &out_mint_key,
-        &pool_pair_0_mint,
-        &pool_pair_1_mint,
-        &pool_pair_2_mint,
-    )?;
+    let in_index =
+        get_mint_index(&in_mint_key, &pool_pair_0_mint, &pool_pair_1_mint, &pool_pair_2_mint)?;
+    let out_index =
+        get_mint_index(&out_mint_key, &pool_pair_0_mint, &pool_pair_1_mint, &pool_pair_2_mint)?;
 
     let mut data = Vec::with_capacity(26);
     data.extend_from_slice(SWAP_EXACT_IN_SELECTOR);
@@ -189,11 +174,8 @@ pub fn swap<'a>(
         swap_accounts.token_2022_program.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let amount_out = invoke_process(
         amount_in,

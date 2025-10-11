@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{solfi_program, solfi_v2_program, HopAccounts};
+use crate::{HopAccounts, solfi_program, solfi_v2_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{TokenAccount, TokenInterface};
@@ -38,8 +38,8 @@ impl<'info> SolfiAccount<'info> {
             pool_token_account_a,
             pool_token_account_b,
             token_program,
-            sysvar_instructions
-        ]: & [AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
+            sysvar_instructions,
+        ]: &[AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -64,10 +64,7 @@ pub fn swap<'a>(
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
     msg!("Dex::Solfi amount_in: {}, offset: {}", amount_in, offset);
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
 
     let mut swap_accounts = SolfiAccount::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &solfi_program::id() {
@@ -88,26 +85,20 @@ pub fn swap<'a>(
         owner_seeds,
     )?;
 
-    let (direction, user_token_account_a, user_token_account_b) =
-        if swap_accounts.swap_source_token.mint == swap_accounts.pool_token_account_a.mint
-            && swap_accounts.swap_destination_token.mint == swap_accounts.pool_token_account_b.mint
-        {
-            (
-                0u8,
-                swap_accounts.swap_source_token.clone(),
-                swap_accounts.swap_destination_token.clone(),
-            )
-        } else if swap_accounts.swap_source_token.mint == swap_accounts.pool_token_account_b.mint
-            && swap_accounts.swap_destination_token.mint == swap_accounts.pool_token_account_a.mint
-        {
-            (
-                1u8,
-                swap_accounts.swap_destination_token.clone(),
-                swap_accounts.swap_source_token.clone(),
-            )
-        } else {
-            return Err(ErrorCode::InvalidTokenMint.into());
-        };
+    let (direction, user_token_account_a, user_token_account_b) = if swap_accounts
+        .swap_source_token
+        .mint
+        == swap_accounts.pool_token_account_a.mint
+        && swap_accounts.swap_destination_token.mint == swap_accounts.pool_token_account_b.mint
+    {
+        (0u8, swap_accounts.swap_source_token.clone(), swap_accounts.swap_destination_token.clone())
+    } else if swap_accounts.swap_source_token.mint == swap_accounts.pool_token_account_b.mint
+        && swap_accounts.swap_destination_token.mint == swap_accounts.pool_token_account_a.mint
+    {
+        (1u8, swap_accounts.swap_destination_token.clone(), swap_accounts.swap_source_token.clone())
+    } else {
+        return Err(ErrorCode::InvalidTokenMint.into());
+    };
 
     let mut data = Vec::with_capacity(ARGS_LEN);
     data.push(7u8); //discriminator
@@ -137,11 +128,8 @@ pub fn swap<'a>(
         swap_accounts.sysvar_instructions.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &SolfiProcessor;
     let amount_out = invoke_process(
@@ -160,7 +148,6 @@ pub fn swap<'a>(
     )?;
     Ok(amount_out)
 }
-
 
 pub struct SolfiAccountV2<'info> {
     pub dex_program_id: &'info AccountInfo<'info>,
@@ -196,10 +183,10 @@ impl<'info> SolfiAccountV2<'info> {
             quote_vault,
             base_mint,
             quote_mint,
-            base_token_program, 
+            base_token_program,
             quote_token_program,
             instruction_sysvar,
-        ]: & [AccountInfo<'info>; V2_ACCOUNTS_LEN] = array_ref![accounts, offset, V2_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; V2_ACCOUNTS_LEN] = array_ref![accounts, offset, V2_ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -239,26 +226,18 @@ pub fn swap_v2<'a>(
     }
     // log pool address
     swap_accounts.market.key().log();
-    
-    let (direction, user_base_token_account, user_quote_token_account) =
-    if swap_accounts.swap_source_token.mint == swap_accounts.base_mint.key()
+
+    let (direction, user_base_token_account, user_quote_token_account) = if swap_accounts
+        .swap_source_token
+        .mint
+        == swap_accounts.base_mint.key()
         && swap_accounts.swap_destination_token.mint == swap_accounts.quote_mint.key()
     {
-        (
-            0u8,
-            swap_accounts.swap_source_token.clone(),
-            swap_accounts.swap_destination_token.clone(),
-        )
+        (0u8, swap_accounts.swap_source_token.clone(), swap_accounts.swap_destination_token.clone())
     } else if swap_accounts.swap_source_token.mint == swap_accounts.quote_mint.key()
         && swap_accounts.swap_destination_token.mint == swap_accounts.base_mint.key()
     {
-        
-        (
-            1u8,
-            swap_accounts.swap_destination_token.clone(),
-            swap_accounts.swap_source_token.clone(),
-        )
-        
+        (1u8, swap_accounts.swap_destination_token.clone(), swap_accounts.swap_source_token.clone())
     } else {
         return Err(ErrorCode::InvalidTokenMint.into());
     };
@@ -301,11 +280,8 @@ pub fn swap_v2<'a>(
         swap_accounts.instruction_sysvar.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &SolfiProcessor;
     let amount_out = invoke_process(
@@ -323,5 +299,4 @@ pub fn swap_v2<'a>(
         owner_seeds,
     )?;
     Ok(amount_out)
-    
 }

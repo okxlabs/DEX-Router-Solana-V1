@@ -2,8 +2,7 @@ use super::common::DexProcessor;
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
 use crate::{
-    letsbonk_platform_config, raydium_launchpad_program, HopAccounts,
-    RAYDIUM_LAUNCHPAD_BUY_SELECTOR, RAYDIUM_LAUNCHPAD_SELL_SELECTOR,
+    BUY_EXACT_IN_SELECTOR, HopAccounts, SELL_EXACT_IN_SELECTOR, raydium_launchpad_program,
 };
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::Instruction;
@@ -57,7 +56,8 @@ impl<'info> LaunchpadAccounts<'info> {
             platform_claim_fee_vault,
             creator_claim_fee_vault,
             event_authority,
-        ]: &[AccountInfo<'info>; LAUNCHPAD_ACCOUNTS_LEN] = array_ref![accounts, offset, LAUNCHPAD_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; LAUNCHPAD_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, LAUNCHPAD_ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -90,6 +90,7 @@ pub fn launchpad_handler<'a>(
     hop: usize,
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
+    platform_name: &str,
 ) -> Result<u64> {
     require!(
         remaining_accounts.len() >= *offset + LAUNCHPAD_ACCOUNTS_LEN,
@@ -100,23 +101,11 @@ pub fn launchpad_handler<'a>(
         swap_accounts.dex_program_id.key().log();
         return Err(ErrorCode::InvalidProgramId.into());
     }
-    let platform_name = if swap_accounts.platform_config.key != &letsbonk_platform_config::id() {
-        "RaydiumLaunchpad"
-    } else {
-        "LetsBonkFun"
-    };
-    msg!(
-        "Dex::{} amount_in: {}, offset: {}",
-        platform_name,
-        amount_in,
-        offset
-    );
+
+    msg!("Dex::{} amount_in: {}, offset: {}", platform_name, amount_in, offset);
     swap_accounts.pool_state.key().log();
 
-    let is_buy = swap_accounts
-        .swap_source_token
-        .mint
-        .eq(&swap_accounts.quote_mint.key());
+    let is_buy = swap_accounts.swap_source_token.mint.eq(&swap_accounts.quote_mint.key());
 
     before_check(
         &swap_accounts.swap_authority_pubkey,
@@ -129,85 +118,40 @@ pub fn launchpad_handler<'a>(
     )?;
 
     let (swap_base_token, swap_quote_token) = if is_buy {
-        (
-            &swap_accounts.swap_destination_token,
-            &swap_accounts.swap_source_token,
-        )
+        (&swap_accounts.swap_destination_token, &swap_accounts.swap_source_token)
     } else {
-        (
-            &swap_accounts.swap_source_token,
-            &swap_accounts.swap_destination_token,
-        )
+        (&swap_accounts.swap_source_token, &swap_accounts.swap_destination_token)
     };
 
     let mut data = Vec::with_capacity(32);
     if is_buy {
-        data.extend_from_slice(RAYDIUM_LAUNCHPAD_BUY_SELECTOR);
+        data.extend_from_slice(BUY_EXACT_IN_SELECTOR);
     } else {
-        data.extend_from_slice(RAYDIUM_LAUNCHPAD_SELL_SELECTOR);
+        data.extend_from_slice(SELL_EXACT_IN_SELECTOR);
     }
     data.extend_from_slice(&amount_in.to_le_bytes());
     data.extend_from_slice(&1u64.to_le_bytes()); //minimum_amount_out
     data.extend_from_slice(&0u64.to_le_bytes()); //share_fee_rate
 
     let mut accounts = Vec::with_capacity(LAUNCHPAD_ACCOUNTS_LEN);
-    accounts.push(AccountMeta::new_readonly(
-        swap_accounts.swap_authority_pubkey.key(),
-        true,
-    ));
-    accounts.push(AccountMeta::new_readonly(
-        swap_accounts.launchpad_authority.key(),
-        false,
-    ));
-    accounts.push(AccountMeta::new_readonly(
-        swap_accounts.global_config.key(),
-        false,
-    ));
-    accounts.push(AccountMeta::new_readonly(
-        swap_accounts.platform_config.key(),
-        false,
-    ));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.swap_authority_pubkey.key(), true));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.launchpad_authority.key(), false));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.global_config.key(), false));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.platform_config.key(), false));
     accounts.push(AccountMeta::new(swap_accounts.pool_state.key(), false));
     accounts.push(AccountMeta::new(swap_base_token.key(), false));
     accounts.push(AccountMeta::new(swap_quote_token.key(), false));
     accounts.push(AccountMeta::new(swap_accounts.base_vault.key(), false));
     accounts.push(AccountMeta::new(swap_accounts.quote_vault.key(), false));
-    accounts.push(AccountMeta::new_readonly(
-        swap_accounts.base_mint.key(),
-        false,
-    ));
-    accounts.push(AccountMeta::new_readonly(
-        swap_accounts.quote_mint.key(),
-        false,
-    ));
-    accounts.push(AccountMeta::new_readonly(
-        swap_accounts.base_token_program.key(),
-        false,
-    ));
-    accounts.push(AccountMeta::new_readonly(
-        swap_accounts.quote_token_program.key(),
-        false,
-    ));
-    accounts.push(AccountMeta::new_readonly(
-        swap_accounts.event_authority.key(),
-        false,
-    ));
-    accounts.push(AccountMeta::new_readonly(
-        swap_accounts.dex_program_id.key(),
-        false,
-    ));
-    accounts.push(AccountMeta::new_readonly(
-        swap_accounts.system_program.key(),
-        false,
-    ));
-    accounts.push(AccountMeta::new(
-        swap_accounts.platform_claim_fee_vault.key(),
-        false,
-    ));
-    accounts.push(AccountMeta::new(
-        swap_accounts.creator_claim_fee_vault.key(),
-        false,
-    ));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.base_mint.key(), false));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.quote_mint.key(), false));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.base_token_program.key(), false));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.quote_token_program.key(), false));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.event_authority.key(), false));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.dex_program_id.key(), false));
+    accounts.push(AccountMeta::new_readonly(swap_accounts.system_program.key(), false));
+    accounts.push(AccountMeta::new(swap_accounts.platform_claim_fee_vault.key(), false));
+    accounts.push(AccountMeta::new(swap_accounts.creator_claim_fee_vault.key(), false));
 
     let mut account_infos = Vec::with_capacity(LAUNCHPAD_ACCOUNTS_LEN);
     account_infos.push(swap_accounts.swap_authority_pubkey.to_account_info());
@@ -229,11 +173,8 @@ pub fn launchpad_handler<'a>(
     account_infos.push(swap_accounts.platform_claim_fee_vault.to_account_info());
     account_infos.push(swap_accounts.creator_claim_fee_vault.to_account_info());
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &LaunchpadProcessor;
     let amount_out = invoke_process(

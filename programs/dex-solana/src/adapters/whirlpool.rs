@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{whirlpool_program, HopAccounts, SWAP_SELECTOR, SWAP_V2_SELECTOR};
+use crate::{HopAccounts, SWAP_SELECTOR, SWAP_V2_SELECTOR, whirlpool_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
@@ -67,7 +67,7 @@ impl<'info> WhirlpoolAccounts<'info> {
             tick_array1,
             tick_array2,
             oracle,
-        ]: & [AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; ACCOUNTS_LEN] = array_ref![accounts, offset, ACCOUNTS_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -104,7 +104,7 @@ impl<'info> WhirlpoolV2Accounts<'info> {
             tick_array1,
             tick_array2,
             oracle,
-        ]: & [AccountInfo<'info>; ACCOUNTS_V2_LEN] = array_ref![accounts, offset, ACCOUNTS_V2_LEN];
+        ]: &[AccountInfo<'info>; ACCOUNTS_V2_LEN] = array_ref![accounts, offset, ACCOUNTS_V2_LEN];
         Ok(Self {
             dex_program_id,
             swap_authority_pubkey,
@@ -135,15 +135,8 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::Whirlpool amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    msg!("Dex::Whirlpool amount_in: {}, offset: {}", amount_in, offset);
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
     let mut swap_accounts = WhirlpoolAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &whirlpool_program::id() {
         return Err(ErrorCode::InvalidProgramId.into());
@@ -181,15 +174,9 @@ pub fn swap<'a>(
         return Err(ErrorCode::InvalidTokenMint.into());
     }
     let (token_owner_account_a, token_owner_account_b) = if a_to_b {
-        (
-            swap_accounts.swap_source_token.clone(),
-            swap_accounts.swap_destination_token.clone(),
-        )
+        (swap_accounts.swap_source_token.clone(), swap_accounts.swap_destination_token.clone())
     } else {
-        (
-            swap_accounts.swap_destination_token.clone(),
-            swap_accounts.swap_source_token.clone(),
-        )
+        (swap_accounts.swap_destination_token.clone(), swap_accounts.swap_source_token.clone())
     };
 
     let mut data = Vec::with_capacity(ARGS_LEN);
@@ -228,11 +215,8 @@ pub fn swap<'a>(
         swap_accounts.oracle.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &WhirlpoolProcessor;
     let amount_out = invoke_process(
@@ -261,11 +245,7 @@ pub fn swap_v2<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::WhirlpoolV2 amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::WhirlpoolV2 amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + ACCOUNTS_V2_LEN,
         ErrorCode::InvalidAccountsLength
@@ -307,15 +287,9 @@ pub fn swap_v2<'a>(
         return Err(ErrorCode::InvalidTokenMint.into());
     }
     let (token_owner_account_a, token_owner_account_b) = if a_to_b {
-        (
-            swap_accounts.swap_source_token.clone(),
-            swap_accounts.swap_destination_token.clone(),
-        )
+        (swap_accounts.swap_source_token.clone(), swap_accounts.swap_destination_token.clone())
     } else {
-        (
-            swap_accounts.swap_destination_token.clone(),
-            swap_accounts.swap_source_token.clone(),
-        )
+        (swap_accounts.swap_destination_token.clone(), swap_accounts.swap_source_token.clone())
     };
 
     let mut data = Vec::with_capacity(ARGS_V2_LEN);
@@ -363,11 +337,8 @@ pub fn swap_v2<'a>(
         swap_accounts.oracle.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &WhirlpoolProcessor;
     let amount_out = invoke_process(

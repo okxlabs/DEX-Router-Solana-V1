@@ -1,6 +1,6 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{byreal_clmm_program, HopAccounts, SWAP_V2_SELECTOR};
+use crate::{HopAccounts, SWAP_V2_SELECTOR, byreal_clmm_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token_interface::TokenAccount;
 use arrayref::array_ref;
@@ -107,15 +107,8 @@ pub fn swap_v2<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::ByrealClmm amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    msg!("Dex::ByrealClmm amount_in: {}, offset: {}", amount_in, offset);
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
     let mut swap_accounts = ByrealClmmSwapV2Accounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &byreal_clmm_program::id() {
         return Err(ErrorCode::InvalidProgramId.into());
@@ -206,11 +199,7 @@ pub fn swap_v2<'a>(
     data[24..40].copy_from_slice(&0u128.to_le_bytes()); // sqrt_price_limit_x64
     data[40..41].copy_from_slice(&1u8.to_le_bytes()); // is_base_input
 
-    let instruction = Instruction {
-        program_id: *swap_accounts.dex_program_id.key,
-        accounts,
-        data,
-    };
+    let instruction = Instruction { program_id: *swap_accounts.dex_program_id.key, accounts, data };
 
     let dex_processor = ByrealClmmSwapV2Processor {};
     let amount_out = invoke_process(

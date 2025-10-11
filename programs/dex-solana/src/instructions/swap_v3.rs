@@ -1,9 +1,9 @@
-use super::{common_swap_v3, SwapArgs};
+use super::{SwapArgs, common_swap_v3};
+use crate::error::ErrorCode;
 use crate::processor::*;
+use crate::utils::transfer_sol_with_rent_exemption;
 use crate::utils::*;
 use crate::wsol_program;
-use crate::utils::transfer_sol_with_rent_exemption;
-use crate::error::ErrorCode;
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
@@ -103,7 +103,9 @@ pub fn swap_tob_handler<'a>(
         platform_fee_rate,
         &ctx.accounts.platform_fee_account,
         trim_rate,
+        None,
         trim_account,
+        None,
         acc_close_flag,
     )?;
     Ok(())
@@ -118,13 +120,7 @@ pub fn swap_toc_handler<'a>(
 ) -> Result<()> {
     let commission_direction = commission_info >> 31 == 1;
     let commission_rate = commission_info & ((1 << 30) - 1);
-    log_rate_info_v3(
-        commission_rate,
-        platform_fee_rate,
-        None,
-        commission_direction,
-        false,
-    );
+    log_rate_info_v3(commission_rate, platform_fee_rate, None, commission_direction, false);
 
     common_swap_v3(
         &SwapToCProcessor,
@@ -148,6 +144,8 @@ pub fn swap_toc_handler<'a>(
         &ctx.accounts.commission_account,
         platform_fee_rate,
         &ctx.accounts.platform_fee_account,
+        None,
+        None,
         None,
         None,
         false,
@@ -199,7 +197,7 @@ pub struct CommissionProxySwapAccountsV3WithReceiver<'info> {
     pub destination_token_program: Option<Interface<'info, TokenInterface>>,
     pub associated_token_program: Option<Program<'info, AssociatedToken>>,
     pub system_program: Option<Program<'info, System>>,
-    
+
     /// Optional SOL receiver account
     /// - None: normal swap or SOL stays with payer
     /// - Some: SOL receiver when converting wSOL -> SOL
@@ -227,11 +225,11 @@ fn validate_sol_receiver_and_flags<'info>(
                 ErrorCode::DestinationMustBeWsolForSolReceiver
             );
             Ok(())
-        },
+        }
         (Some(_), false) => {
             // Invalid: has receiver but acc_close_flag is false
             Err(ErrorCode::SolReceiverRequiresAccCloseFlag.into())
-        },
+        }
         (None, _) => {
             // Valid: no receiver, any acc_close_flag is fine
             Ok(())
@@ -253,14 +251,14 @@ pub fn swap_tob_specified_receiver_handler<'a>(
     let commission_direction = commission_info >> 31 == 1;
     let acc_close_flag = ((commission_info & (1 << 30)) >> 30) == 1;
     let commission_rate = commission_info & ((1 << 30) - 1);
-    
+
     // Validate sol_receiver and acc_close_flag combination
     validate_sol_receiver_and_flags(
         &ctx.accounts.sol_receiver,
         acc_close_flag,
         &ctx.accounts.destination_mint.key(),
     )?;
-    
+
     log_rate_info_v3(
         commission_rate,
         platform_fee_rate,
@@ -274,7 +272,7 @@ pub fn swap_tob_specified_receiver_handler<'a>(
     } else {
         None
     };
-    
+
     // Execute swap and get actual amount out
     let actual_amount_out = common_swap_v3(
         &SwapToBProcessor,
@@ -299,10 +297,12 @@ pub fn swap_tob_specified_receiver_handler<'a>(
         platform_fee_rate,
         &ctx.accounts.platform_fee_account,
         trim_rate,
+        None,
         trim_account,
+        None,
         acc_close_flag,
     )?;
-    
+
     // Transfer SOL to specified receiver if applicable
     if let Some(sol_receiver) = &ctx.accounts.sol_receiver {
         // Only transfer if acc_close_flag is true (already validated)
@@ -312,10 +312,66 @@ pub fn swap_tob_specified_receiver_handler<'a>(
                 &ctx.accounts.payer,
                 sol_receiver,
                 actual_amount_out,
-                None,  // No seeds needed for payer
+                None, // No seeds needed for payer
             )?;
         }
     }
-    
+
+    Ok(())
+}
+
+pub fn swap_tob_enhanced_handler<'a>(
+    ctx: Context<'_, '_, 'a, 'a, CommissionProxySwapAccountsV3<'a>>,
+    args: SwapArgs,
+    commission_info: u32,
+    order_id: u64,
+    trim_rate: u8,
+    charge_rate: u16,
+    platform_fee_rate: Option<u16>,
+) -> Result<()> {
+    let commission_direction = commission_info >> 31 == 1;
+    let acc_close_flag = ((commission_info & (1 << 30)) >> 30) == 1;
+    let commission_rate = commission_info & ((1 << 30) - 1);
+    log_rate_info_v3_enhanced(
+        commission_rate,
+        platform_fee_rate,
+        trim_rate,
+        charge_rate,
+        commission_direction,
+        acc_close_flag,
+    );
+    require!(trim_rate > 0 && charge_rate > 0, ErrorCode::InvalidTrimRate);
+
+    let trim_account = &ctx.remaining_accounts[ctx.remaining_accounts.len() - 2];
+    let charge_account = &ctx.remaining_accounts[ctx.remaining_accounts.len() - 1];
+
+    common_swap_v3(
+        &SwapToBProcessor,
+        &ctx.accounts.payer,
+        &mut ctx.accounts.source_token_account,
+        &mut ctx.accounts.destination_token_account,
+        &ctx.accounts.source_mint,
+        &ctx.accounts.destination_mint,
+        &mut ctx.accounts.sa_authority,
+        &mut ctx.accounts.source_token_sa,
+        &mut ctx.accounts.destination_token_sa,
+        &ctx.accounts.source_token_program,
+        &ctx.accounts.destination_token_program,
+        &ctx.accounts.associated_token_program,
+        &ctx.accounts.system_program,
+        ctx.remaining_accounts,
+        args,
+        order_id,
+        commission_rate,
+        commission_direction,
+        &ctx.accounts.commission_account,
+        platform_fee_rate,
+        &ctx.accounts.platform_fee_account,
+        Some(trim_rate),
+        Some(charge_rate),
+        Some(trim_account),
+        Some(charge_account),
+        acc_close_flag,
+    )?;
     Ok(())
 }

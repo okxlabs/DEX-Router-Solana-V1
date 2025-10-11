@@ -1,18 +1,18 @@
+use crate::constants::MIN_SOL_ACCOUNT_RENT;
 use crate::error::ErrorCode;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::{invoke, invoke_signed};
 use anchor_lang::solana_program::system_instruction::transfer;
-use anchor_spl::associated_token::{create, AssociatedToken};
+use anchor_spl::associated_token::{AssociatedToken, create};
 use anchor_spl::token::Token;
 use anchor_spl::token_2022::spl_token_2022::extension::BaseStateWithExtensions;
 use anchor_spl::token_2022::spl_token_2022::{
     self,
-    extension::{transfer_fee::TransferFeeConfig, StateWithExtensions},
+    extension::{StateWithExtensions, transfer_fee::TransferFeeConfig},
 };
 use anchor_spl::token_2022::{self, Token2022};
 use anchor_spl::token_2022_extensions;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-use crate::constants::MIN_SOL_ACCOUNT_RENT;
 
 pub fn transfer_token<'a>(
     authority: AccountInfo<'a>,
@@ -31,12 +31,7 @@ pub fn transfer_token<'a>(
         token_2022::transfer_checked(
             CpiContext::new_with_signer(
                 token_program.to_account_info(),
-                token_2022::TransferChecked {
-                    from,
-                    to,
-                    authority,
-                    mint,
-                },
+                token_2022::TransferChecked { from, to, authority, mint },
                 signer_seeds,
             ),
             amount,
@@ -46,12 +41,7 @@ pub fn transfer_token<'a>(
         token_2022::transfer_checked(
             CpiContext::new(
                 token_program.to_account_info(),
-                token_2022::TransferChecked {
-                    from,
-                    to,
-                    authority,
-                    mint,
-                },
+                token_2022::TransferChecked { from, to, authority, mint },
             ),
             amount,
             mint_decimals,
@@ -86,18 +76,17 @@ pub fn transfer_sol_with_rent_exemption<'a>(
     requested_amount: u64,
     from_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    
     // Skip if transferring to self or amount is 0
     if from.key() == to.key() || requested_amount == 0 {
         return Ok(0);
     }
-    
+
     // Calculate actual transfer amount to ensure receiver rent exemption
     let receiver_current_balance = to.lamports();
     let receiver_final_balance = receiver_current_balance
         .checked_add(requested_amount)
         .ok_or(ErrorCode::CalculationError)?;
-    
+
     // Determine actual transfer amount
     let actual_transfer_amount = if receiver_final_balance < MIN_SOL_ACCOUNT_RENT {
         // Need to top up to minimum rent
@@ -108,33 +97,24 @@ pub fn transfer_sol_with_rent_exemption<'a>(
         // Receiver will have enough, use original amount
         requested_amount
     };
-    
+
     // Check if sender has enough balance
     let sender_balance = from.lamports();
     if sender_balance < actual_transfer_amount {
-        msg!(
-            "Insufficient sender balance: {} < {}",
-            sender_balance,
-            actual_transfer_amount
-        );
+        msg!("Insufficient sender balance: {} < {}", sender_balance, actual_transfer_amount);
         return Err(ErrorCode::InsufficientBalance.into());
     }
-    
+
     // Perform transfer using existing transfer_sol function
-    transfer_sol(
-        from.to_account_info(),
-        to.to_account_info(),
-        actual_transfer_amount,
-        from_seeds,
-    )?;
-    
+    transfer_sol(from.to_account_info(), to.to_account_info(), actual_transfer_amount, from_seeds)?;
+
     msg!(
         "SOL transferred with rent exemption: {} lamports (requested: {}) to {}",
         actual_transfer_amount,
         requested_amount,
         to.key()
     );
-    
+
     Ok(actual_transfer_amount)
 }
 
@@ -146,17 +126,13 @@ pub fn sync_wsol_account<'a>(
     if let Some(signer_seeds) = signer_seeds {
         token_2022::sync_native(CpiContext::new_with_signer(
             token_program.to_account_info(),
-            token_2022::SyncNative {
-                account: wsol_account.to_account_info(),
-            },
+            token_2022::SyncNative { account: wsol_account.to_account_info() },
             signer_seeds,
         ))
     } else {
         token_2022::sync_native(CpiContext::new(
             token_program.to_account_info(),
-            token_2022::SyncNative {
-                account: wsol_account.to_account_info(),
-            },
+            token_2022::SyncNative { account: wsol_account.to_account_info() },
         ))
     }
 }
@@ -174,21 +150,13 @@ pub fn close_token_account<'a>(
     if let Some(signer_seeds) = signer_seeds {
         token_2022::close_account(CpiContext::new_with_signer(
             token_program.to_account_info(),
-            token_2022::CloseAccount {
-                account: token_account,
-                destination,
-                authority,
-            },
+            token_2022::CloseAccount { account: token_account, destination, authority },
             signer_seeds,
         ))
     } else {
         token_2022::close_account(CpiContext::new(
             token_program.to_account_info(),
-            token_2022::CloseAccount {
-                account: token_account,
-                destination,
-                authority,
-            },
+            token_2022::CloseAccount { account: token_account, destination, authority },
         ))
     }
 }
@@ -256,9 +224,7 @@ pub fn create_sa_if_needed<'info>(
         ))?;
     }
     let token_sa_box = Box::leak(Box::new(token_sa.clone()));
-    Ok(Some(InterfaceAccount::<TokenAccount>::try_from(
-        token_sa_box,
-    )?))
+    Ok(Some(InterfaceAccount::<TokenAccount>::try_from(token_sa_box)?))
 }
 
 /// Check if the token account is initialized
@@ -283,9 +249,7 @@ pub fn get_transfer_fee(mint_info: &AccountInfo, pre_fee_amount: u64) -> Result<
     let mint = StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_data)?;
 
     let fee = if let Ok(transfer_fee_config) = mint.get_extension::<TransferFeeConfig>() {
-        transfer_fee_config
-            .calculate_epoch_fee(Clock::get()?.epoch, pre_fee_amount)
-            .unwrap()
+        transfer_fee_config.calculate_epoch_fee(Clock::get()?.epoch, pre_fee_amount).unwrap()
     } else {
         0
     };
@@ -344,4 +308,3 @@ pub fn is_ata(account: &AccountInfo) -> bool {
 pub fn is_system_account(account: &AccountInfo) -> bool {
     account.as_ref().owner == &crate::system_program::ID
 }
-

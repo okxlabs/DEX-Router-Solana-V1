@@ -3,7 +3,8 @@ use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
 use crate::utils::{close_token_account, sync_wsol_account, transfer_sol};
 use crate::{
-    authority_pda, boopfun_program, wsol_sa, HopAccounts, BOOPFUN_BUY_SELECTOR, BOOPFUN_SELL_SELECTOR, MIN_SOL_ACCOUNT_RENT, SA_AUTHORITY_SEED, SOL_DIFF_LIMIT, ZERO_ADDRESS
+    BOOPFUN_BUY_SELECTOR, BOOPFUN_SELL_SELECTOR, HopAccounts, MIN_SOL_ACCOUNT_RENT,
+    SA_AUTHORITY_SEED, SOL_DIFF_LIMIT, ZERO_ADDRESS, authority_pda, boopfun_program, wsol_sa,
 };
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::Instruction;
@@ -51,10 +52,7 @@ pub fn boopfun_before_check(
         ErrorCode::InvalidSwapAuthority
     );
     if !proxy_swap && hop == 0 && owner_seeds.is_none() {
-        require!(
-            swap_authority_pubkey.is_signer,
-            ErrorCode::SwapAuthorityIsNotSigner
-        );
+        require!(swap_authority_pubkey.is_signer, ErrorCode::SwapAuthorityIsNotSigner);
     }
     Ok(())
 }
@@ -112,7 +110,10 @@ impl DexProcessor for BoopfunBuyProcessor {
 
         if authority.key() == authority_pda::ID {
             let before_sa_authority_lamports = authority.lamports();
-            require!(source_token_account.key() != wsol_sa::ID, ErrorCode::InvalidSourceTokenAccount);
+            require!(
+                source_token_account.key() != wsol_sa::ID,
+                ErrorCode::InvalidSourceTokenAccount
+            );
             close_token_account(
                 source_token_account.to_account_info(),
                 authority.to_account_info(),
@@ -121,8 +122,7 @@ impl DexProcessor for BoopfunBuyProcessor {
                 Some(SA_AUTHORITY_SEED),
             )?;
             Ok(before_sa_authority_lamports)
-        } 
-        else {
+        } else {
             close_token_account(
                 source_token_account.to_account_info(),
                 authority.to_account_info(),
@@ -145,11 +145,16 @@ impl DexProcessor for BoopfunBuyProcessor {
             let payer = account_infos.get(14).unwrap();
             let authority = account_infos.get(6).unwrap();
 
-            if authority.key() == authority_pda::ID {  
+            if authority.key() == authority_pda::ID {
                 let after_sa_authority_lamports = authority.lamports();
-                let diff_sa_lamports = after_sa_authority_lamports.saturating_sub(before_sa_authority_lamports);
+                let diff_sa_lamports =
+                    after_sa_authority_lamports.saturating_sub(before_sa_authority_lamports);
                 if diff_sa_lamports > 0 {
-                    require!(authority.lamports().checked_sub(diff_sa_lamports).unwrap() >= MIN_SOL_ACCOUNT_RENT, ErrorCode::InsufficientFunds);
+                    require!(
+                        authority.lamports().checked_sub(diff_sa_lamports).unwrap()
+                            >= MIN_SOL_ACCOUNT_RENT,
+                        ErrorCode::InsufficientFunds
+                    );
                     require!(diff_sa_lamports <= SOL_DIFF_LIMIT, ErrorCode::InvalidDiffLamports);
                     transfer_sol(
                         authority.to_account_info(),
@@ -223,7 +228,8 @@ impl<'info> BoopfunSellAccounts<'info> {
             system_program,
             token_program,
             associated_token_program,
-        ]: &[AccountInfo<'info>; SELL_ACCOUNTS_LEN] = array_ref![accounts, offset, SELL_ACCOUNTS_LEN];
+        ]: &[AccountInfo<'info>; SELL_ACCOUNTS_LEN] =
+            array_ref![accounts, offset, SELL_ACCOUNTS_LEN];
 
         Ok(Self {
             dex_program_id,
@@ -316,9 +322,7 @@ impl<'info> BoopfunSellAccounts<'info> {
             .and_then(|v| v.checked_div(10_000u128))
             .ok_or(ErrorCode::CalculationError)?;
 
-        Ok(amount_out
-            .try_into()
-            .map_err(|_| ErrorCode::CalculationError)?)
+        Ok(amount_out.try_into().map_err(|_| ErrorCode::CalculationError)?)
     }
 
     fn calculate_output_xyk(
@@ -345,22 +349,17 @@ impl<'info> BoopfunSellAccounts<'info> {
             .checked_add(amount_in as u128)
             .ok_or(ErrorCode::CalculationError)?;
 
-        let new_x: u128 = invariant
-            .checked_div(denominator)
-            .ok_or(ErrorCode::CalculationError)?;
+        let new_x: u128 = invariant.checked_div(denominator).ok_or(ErrorCode::CalculationError)?;
 
-        let amount_out_before_fee: u128 = current_x
-            .checked_sub(new_x)
-            .ok_or(ErrorCode::CalculationError)?;
+        let amount_out_before_fee: u128 =
+            current_x.checked_sub(new_x).ok_or(ErrorCode::CalculationError)?;
 
         let amount_out: u128 = amount_out_before_fee
             .checked_mul(10_000u128 - swap_fee_basis_points as u128)
             .and_then(|v| v.checked_div(10_000u128))
             .ok_or(ErrorCode::CalculationError)?;
 
-        Ok(amount_out
-            .try_into()
-            .map_err(|_| ErrorCode::CalculationError)?)
+        Ok(amount_out.try_into().map_err(|_| ErrorCode::CalculationError)?)
     }
 }
 
@@ -438,11 +437,8 @@ pub fn buy<'a>(
         swap_accounts.swap_source_token.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &BoopfunBuyProcessor;
     let amount_out = invoke_process(
@@ -471,11 +467,7 @@ pub fn sell<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::BoopfunSell amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
+    msg!("Dex::BoopfunSell amount_in: {}, offset: {}", amount_in, offset);
     require!(
         remaining_accounts.len() >= *offset + SELL_ACCOUNTS_LEN,
         ErrorCode::InvalidAccountsLength
@@ -541,15 +533,9 @@ pub fn sell<'a>(
         swap_accounts.swap_destination_token.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: boopfun_program::id(),
-        accounts,
-        data,
-    };
+    let instruction = Instruction { program_id: boopfun_program::id(), accounts, data };
 
-    let dex_processor = &BoopfunSellProcessor {
-        amount: expected_amount_out,
-    };
+    let dex_processor = &BoopfunSellProcessor { amount: expected_amount_out };
     let amount_out = invoke_process(
         amount_in,
         dex_processor,

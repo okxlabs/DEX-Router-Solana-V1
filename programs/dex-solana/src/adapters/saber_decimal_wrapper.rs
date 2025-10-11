@@ -1,8 +1,8 @@
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
 use crate::{
-    saber_decimal_wrapper_program, HopAccounts, SABER_DECIMAL_DEPOSIT_SELECTOR,
-    SABER_DECIMAL_WITHDRAW_SELECTOR,
+    HopAccounts, SABER_DECIMAL_DEPOSIT_SELECTOR, SABER_DECIMAL_WITHDRAW_SELECTOR,
+    saber_decimal_wrapper_program,
 };
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token_interface::TokenAccount;
@@ -71,15 +71,8 @@ pub fn deposit<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::SaberDecimalWrapperDeposit amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    msg!("Dex::SaberDecimalWrapperDeposit amount_in: {}, offset: {}", amount_in, offset);
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
     let mut swap_accounts =
         SaberDecimalWrapperAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &saber_decimal_wrapper_program::id() {
@@ -125,11 +118,8 @@ pub fn deposit<'a>(
     data[0..8].copy_from_slice(&SABER_DECIMAL_DEPOSIT_SELECTOR[..]);
     data[8..16].copy_from_slice(&amount_in.to_le_bytes());
 
-    let instruction = Instruction {
-        program_id: *swap_accounts.dex_program_id.key,
-        accounts: account_meta,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: *swap_accounts.dex_program_id.key, accounts: account_meta, data };
 
     let dex_processor = SaberDecimalProcessor {};
     let amount_out = invoke_process(
@@ -159,15 +149,8 @@ pub fn withdraw<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::SaberDecimalWrapperWithdraw amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    msg!("Dex::SaberDecimalWrapperWithdraw amount_in: {}, offset: {}", amount_in, offset);
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
     let mut swap_accounts =
         SaberDecimalWrapperAccounts::parse_accounts(remaining_accounts, *offset)?;
     if swap_accounts.dex_program_id.key != &saber_decimal_wrapper_program::id() {
@@ -213,11 +196,8 @@ pub fn withdraw<'a>(
     data[0..8].copy_from_slice(&SABER_DECIMAL_WITHDRAW_SELECTOR[..]);
     data[8..16].copy_from_slice(&amount_in.to_le_bytes());
 
-    let instruction = Instruction {
-        program_id: *swap_accounts.dex_program_id.key,
-        accounts: account_meta,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: *swap_accounts.dex_program_id.key, accounts: account_meta, data };
 
     let dex_processor = SaberDecimalProcessor {};
     invoke_process(

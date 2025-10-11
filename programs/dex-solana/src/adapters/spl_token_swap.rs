@@ -1,10 +1,7 @@
+use crate::HopAccounts;
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::HopAccounts;
-use crate::{
-    one_moon_swap_program, orca_swap_program, saros_program, spl_token_swap_program,
-    step_swap_program,
-};
+use crate::{one_moon_swap_program, orca_swap_program, saros_program, spl_token_swap_program};
 use anchor_lang::{prelude::*, solana_program::instruction::Instruction};
 use anchor_spl::token::Token;
 use anchor_spl::token_interface::TokenAccount;
@@ -73,22 +70,15 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!(
-        "Dex::SplTokenSwap amount_in: {}, offset: {}",
-        amount_in,
-        offset
-    );
-    require!(
-        remaining_accounts.len() >= *offset + ACCOUNTS_LEN,
-        ErrorCode::InvalidAccountsLength
-    );
+    msg!("Dex::SplTokenSwap amount_in: {}, offset: {}", amount_in, offset);
+    require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
     let mut swap_accounts = SplTokenSwapAccounts::parse_accounts(remaining_accounts, *offset)?;
     let valid_program_ids = [
         spl_token_swap_program::id(),
         orca_swap_program::id(),
         saros_program::id(),
         one_moon_swap_program::id(),
-        step_swap_program::id(),
+        // step_swap_program::id(), // Adapter aborted
     ];
     require!(
         valid_program_ids.contains(swap_accounts.dex_program_id.key),
@@ -157,11 +147,8 @@ pub fn swap<'a>(
         swap_accounts.token_program.to_account_info(),
     ];
 
-    let instruction = Instruction {
-        program_id: swap_accounts.dex_program_id.key(),
-        accounts,
-        data,
-    };
+    let instruction =
+        Instruction { program_id: swap_accounts.dex_program_id.key(), accounts, data };
 
     let dex_processor = &SplTokenSwapProcessor;
     let amount_out = invoke_process(
