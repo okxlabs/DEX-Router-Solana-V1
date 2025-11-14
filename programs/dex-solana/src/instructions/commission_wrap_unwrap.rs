@@ -155,7 +155,7 @@ pub fn commission_wrap_unwrap_handler<'a>(
         )?;
     }
 
-    log_commission_info(args.commission_direction, commission_amount);
+    log_commission_info(args.commission_direction, commission_amount, 0);
 
     Ok(())
 }

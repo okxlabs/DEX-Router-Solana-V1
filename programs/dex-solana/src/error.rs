@@ -44,6 +44,9 @@ pub enum ErrorCode {
     #[msg("Invalid trim rate")]
     InvalidTrimRate,
 
+    #[msg("Invalid charge rate")]
+    InvalidChargeRate,
+
     #[msg("Invalid commission token account")]
     InvalidCommissionTokenAccount,
 
@@ -131,6 +134,9 @@ pub enum ErrorCode {
     #[msg("Trim account is none")]
     TrimAccountIsNone,
 
+    #[msg("Charge account is none")]
+    ChargeAccountIsNone,
+
     #[msg("Invalid fee account")]
     InvalidFeeAccount,
 
@@ -172,6 +178,9 @@ pub enum ErrorCode {
 
     #[msg("Invalid trim account")]
     InvalidTrimAccount,
+
+    #[msg("Invalid charge account")]
+    InvalidChargeAccount,
 
     #[msg("Invalid commission account")]
     InvalidCommissionAccount,

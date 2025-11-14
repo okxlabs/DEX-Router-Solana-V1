@@ -11,7 +11,7 @@ pub fn swap<'a>(
     _proxy_swap: bool,
     _owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!("Dex::GoonFi ABORT");
+    msg!("Dex::AlphaQ ABORT");
     require!(true == false, ErrorCode::AdapterAbort);
     Ok(0)
 }

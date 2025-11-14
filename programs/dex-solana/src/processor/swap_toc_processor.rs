@@ -104,18 +104,22 @@ impl SwapToCProcessor {
             // Transfer SOL commission
             if commission_amount > 0 {
                 let commission_account = commission_account.as_ref().unwrap();
-                let actual_fee_amount =
+                let adjust_amount =
                     transfer_sol_fee(payer, commission_account, commission_amount, None)?;
-                log_commission_info(true, actual_fee_amount);
+                log_commission_info(true, commission_amount, adjust_amount);
                 commission_account.key().log();
             }
 
             // Transfer SOL platform fee
             if platform_fee_amount > 0 {
                 let platform_fee_account = platform_fee_account.as_ref().unwrap();
-                let actual_fee_amount =
+                let adjust_amount =
                     transfer_sol_fee(payer, platform_fee_account, platform_fee_amount, None)?;
-                log_platform_fee_info(actual_fee_amount, &platform_fee_account.key());
+                log_platform_fee_info(
+                    platform_fee_amount,
+                    adjust_amount,
+                    &platform_fee_account.key(),
+                );
             }
         } else {
             require!(source_token_program.is_some(), ErrorCode::SourceTokenProgramIsNone);
@@ -133,7 +137,7 @@ impl SwapToCProcessor {
                     commission_amount,
                     None,
                 )?;
-                log_commission_info(true, commission_amount);
+                log_commission_info(true, commission_amount, 0);
                 commission_account.key().log();
             }
 
@@ -149,7 +153,7 @@ impl SwapToCProcessor {
                     platform_fee_amount,
                     None,
                 )?;
-                log_platform_fee_info(platform_fee_amount, &platform_fee_account.key());
+                log_platform_fee_info(platform_fee_amount, 0, &platform_fee_account.key());
             }
         }
 
@@ -198,17 +202,21 @@ impl SwapToCProcessor {
             // Transfer sol fees
             if commission_amount > 0 {
                 let commission_account = commission_account.as_ref().unwrap();
-                let actual_fee_amount =
+                let adjust_amount =
                     transfer_sol_fee(payer, commission_account, commission_amount, None)?;
-                log_commission_info(false, actual_fee_amount);
+                log_commission_info(false, commission_amount, adjust_amount);
                 commission_account.key().log();
             }
 
             if platform_fee_amount > 0 {
                 let platform_fee_account = platform_fee_account.as_ref().unwrap();
-                let actual_fee_amount =
+                let adjust_amount =
                     transfer_sol_fee(payer, platform_fee_account, platform_fee_amount, None)?;
-                log_platform_fee_info(actual_fee_amount, &platform_fee_account.key());
+                log_platform_fee_info(
+                    platform_fee_amount,
+                    adjust_amount,
+                    &platform_fee_account.key(),
+                );
             }
         } else {
             // Transfer token fees
@@ -223,7 +231,7 @@ impl SwapToCProcessor {
                     commission_amount,
                     None,
                 )?;
-                log_commission_info(false, commission_amount);
+                log_commission_info(false, commission_amount, 0);
                 commission_account.key().log();
             }
 
@@ -238,7 +246,7 @@ impl SwapToCProcessor {
                     platform_fee_amount,
                     None,
                 )?;
-                log_platform_fee_info(platform_fee_amount, &platform_fee_account.key());
+                log_platform_fee_info(platform_fee_amount, 0, &platform_fee_account.key());
             }
         }
         Ok(())

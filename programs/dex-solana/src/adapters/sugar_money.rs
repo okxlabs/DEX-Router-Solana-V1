@@ -8,6 +8,7 @@ use crate::{
     wsol_sa,
 };
 
+use anchor_spl::token::Token;
 use borsh::{BorshDeserialize, BorshSerialize};
 
 use anchor_lang::prelude::*;
@@ -43,13 +44,14 @@ pub struct SugarMoneyAccounts<'info> {
     pub bonding_curve_sol_associated_account: &'info AccountInfo<'info>,
     pub bonding_curve_token_associated_account: &'info AccountInfo<'info>,
     pub fee_receiver: &'info AccountInfo<'info>,
+    pub wsol_program: Program<'info, Token>,
     pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
     pub rent: &'info AccountInfo<'info>,
     pub event_authority: &'info AccountInfo<'info>,
 }
-const ACCOUNTS_LEN: usize = 15;
+const ACCOUNTS_LEN: usize = 16;
 
 pub struct SugarMoneyBuyProcessor;
 impl DexProcessor for SugarMoneyBuyProcessor {
@@ -91,7 +93,7 @@ impl DexProcessor for SugarMoneyBuyProcessor {
         before_sa_authority_lamports: u64,
     ) -> Result<u64> {
         if before_sa_authority_lamports > 0 {
-            let payer = account_infos.get(15).unwrap();
+            let payer = account_infos.get(16).unwrap();
             let authority = account_infos.get(6).unwrap();
             if authority.key() == authority_pda::ID {
                 let after_authority_lamports = authority.lamports();
@@ -178,6 +180,7 @@ impl<'info> SugarMoneyAccounts<'info> {
             bonding_curve_sol_associated_account,
             bonding_curve_token_associated_account,
             fee_receiver,
+            wsol_program,
             token_program,
             associated_token_program,
             system_program,
@@ -196,6 +199,7 @@ impl<'info> SugarMoneyAccounts<'info> {
             bonding_curve_sol_associated_account,
             bonding_curve_token_associated_account,
             fee_receiver,
+            wsol_program: Program::try_from(wsol_program)?,
             token_program: Interface::try_from(token_program)?,
             associated_token_program: Program::try_from(associated_token_program)?,
             system_program: Program::try_from(system_program)?,
@@ -280,6 +284,7 @@ pub fn buy<'a>(
     account_infos.push(swap_accounts.swap_authority.to_account_info());
     account_infos.push(swap_accounts.swap_authority.to_account_info());
     account_infos.push(swap_accounts.fee_receiver.to_account_info());
+    account_infos.push(swap_accounts.wsol_program.to_account_info());
     account_infos.push(swap_accounts.token_program.to_account_info());
     account_infos.push(swap_accounts.associated_token_program.to_account_info());
     account_infos.push(swap_accounts.system_program.to_account_info());
@@ -385,6 +390,7 @@ pub fn sell<'a>(
     account_infos.push(swap_accounts.swap_authority.to_account_info());
     account_infos.push(swap_accounts.swap_authority.to_account_info());
     account_infos.push(swap_accounts.fee_receiver.to_account_info());
+    account_infos.push(swap_accounts.wsol_program.to_account_info());
     account_infos.push(swap_accounts.token_program.to_account_info());
     account_infos.push(swap_accounts.associated_token_program.to_account_info());
     account_infos.push(swap_accounts.system_program.to_account_info());

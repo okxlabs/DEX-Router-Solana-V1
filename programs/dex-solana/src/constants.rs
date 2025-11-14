@@ -28,7 +28,7 @@ pub const MIN_SOL_ACCOUNT_RENT: u64 = 890880;
 pub const SOL_DIFF_LIMIT: u64 = 8_100_000;
 
 // Actual amount_in lower bound ratio for post swap check
-pub const ACTUAL_IN_LOWER_BOUND_NUM: u128 = 90; // 90%
+pub const ACTUAL_IN_LOWER_BOUND_NUM: u128 = 95; // 95%
 pub const ACTUAL_IN_LOWER_BOUND_DEN: u128 = 100; // denominator for percentage
 
 pub const SWAP_SELECTOR: &[u8; 8] = &[248, 198, 158, 145, 225, 117, 135, 200];
@@ -73,6 +73,7 @@ pub const MANIFEST_SWAP_SELECTOR: &[u8; 1] = &[4];
 pub const TESSERA_SWAP_SELECTOR: &[u8; 1] = &[16];
 pub const SOL_RFQ_FILL_ORDER_SELECTOR: &[u8; 8] = &[232, 122, 115, 25, 199, 143, 136, 162];
 pub const GOONFI_SWAP_SELECTOR: &[u8; 1] = &[2];
+pub const SPOT_SWAP_SELECTOR: &[u8; 8] = &[167, 97, 12, 231, 237, 78, 166, 251];
 
 pub const HUMIDIFI_SWAP_SELECTOR: u8 = 0x4;
 const HUMIDIFI_IX_DATA_KEY_SEED: [u8; 32] = [
@@ -89,6 +90,10 @@ pub const HUMIDIFI_IX_DATA_KEY: u64 = u64::from_le_bytes([
     HUMIDIFI_IX_DATA_KEY_SEED[6],
     HUMIDIFI_IX_DATA_KEY_SEED[7],
 ]);
+pub const ALPHAQ_SWAP_SELECTOR: &[u8; 1] = &[0x0c];
+
+pub const BUY_EXACT_SOL_IN_SELECTOR: &[u8; 8] = &[56, 252, 116, 8, 158, 223, 205, 95]; // 38 fc 74 08 9e df cd 5f
+pub const BUY_EXACT_QUOTE_IN_SELECTOR: &[u8; 8] = &[198, 46, 21, 82, 180, 217, 232, 112]; // c6 2e 15 52 b4 d9 e8 70
 
 // ******************** Limit Order ******************** //
 pub const GLOBAL_CONFIG_SEED: &str = "global_config";
@@ -478,7 +483,7 @@ pub mod moonit_program {
     declare_id!("MoonCVVNZFSYkqNXP6bxHLPL6QQJiMagDL3qcqUQTrG");
 }
 
-pub mod swaap_program {
+pub mod whalestreet_program {
     use anchor_lang::declare_id;
     declare_id!("5FyWAoG8V6hxgY6XM9hZStNxSW4D6mkv8HmYrxuPPDhv");
 }
@@ -486,4 +491,14 @@ pub mod swaap_program {
 pub mod sugar_money_program {
     use anchor_lang::declare_id;
     declare_id!("deus4Bvftd5QKcEkE5muQaWGWDoma8GrySvPFrBPjhS");
+}
+
+pub mod alphaq_program {
+    use anchor_lang::declare_id;
+    declare_id!("ALPHAQmeA7bjrVuccPsYPiCvsi428SNwte66Srvs4pHA");
+}
+
+pub mod futarchy_amm_program {
+    use anchor_lang::declare_id;
+    declare_id!("FUTARELBfJfQ8RDGhg1wdhddq1odMAJUePHFuBYfUxKq");
 }

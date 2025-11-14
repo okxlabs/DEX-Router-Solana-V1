@@ -182,26 +182,30 @@ impl SwapToBProcessor {
             // Transfer SOL commission
             if commission_amount > 0 {
                 let commission_account = commission_account.as_ref().unwrap();
-                transfer_sol_fee(
+                let adjust_amount = transfer_sol_fee(
                     sa_authority,
                     commission_account,
                     commission_amount,
                     Some(SA_AUTHORITY_SEED),
                 )?;
-                log_commission_info(true, commission_amount);
+                log_commission_info(true, commission_amount, adjust_amount);
                 commission_account.key().log();
             }
 
             // Transfer SOL platform fee
             if platform_fee_amount > 0 {
                 let platform_fee_account = platform_fee_account.as_ref().unwrap();
-                transfer_sol_fee(
+                let adjust_amount = transfer_sol_fee(
                     sa_authority,
                     platform_fee_account,
                     platform_fee_amount,
                     Some(SA_AUTHORITY_SEED),
                 )?;
-                log_platform_fee_info(platform_fee_amount, &platform_fee_account.key());
+                log_platform_fee_info(
+                    platform_fee_amount,
+                    adjust_amount,
+                    &platform_fee_account.key(),
+                );
             }
         } else {
             require!(source_token_sa.is_some(), ErrorCode::SourceTokenSaIsNone);
@@ -221,7 +225,7 @@ impl SwapToBProcessor {
                     commission_amount,
                     Some(SA_AUTHORITY_SEED),
                 )?;
-                log_commission_info(true, commission_amount);
+                log_commission_info(true, commission_amount, 0);
                 commission_account.key().log();
             }
 
@@ -237,7 +241,7 @@ impl SwapToBProcessor {
                     platform_fee_amount,
                     Some(SA_AUTHORITY_SEED),
                 )?;
-                log_platform_fee_info(platform_fee_amount, &platform_fee_account.key());
+                log_platform_fee_info(platform_fee_amount, 0, &platform_fee_account.key());
             }
         }
 
@@ -297,25 +301,29 @@ impl SwapToBProcessor {
             // Transfer SOL fees
             if commission_amount > 0 {
                 let commission_account = commission_account.as_ref().unwrap();
-                transfer_sol_fee(
+                let adjust_amount = transfer_sol_fee(
                     sa_authority,
                     commission_account,
                     commission_amount,
                     Some(SA_AUTHORITY_SEED),
                 )?;
-                log_commission_info(false, commission_amount);
+                log_commission_info(false, commission_amount, adjust_amount);
                 commission_account.key().log();
             }
 
             if platform_fee_amount > 0 {
                 let platform_fee_account = platform_fee_account.as_ref().unwrap();
-                transfer_sol_fee(
+                let adjust_amount = transfer_sol_fee(
                     sa_authority,
                     platform_fee_account,
                     platform_fee_amount,
                     Some(SA_AUTHORITY_SEED),
                 )?;
-                log_platform_fee_info(platform_fee_amount, &platform_fee_account.key());
+                log_platform_fee_info(
+                    platform_fee_amount,
+                    adjust_amount,
+                    &platform_fee_account.key(),
+                );
             }
 
             return Ok(true);
@@ -337,7 +345,7 @@ impl SwapToBProcessor {
                     commission_amount,
                     Some(SA_AUTHORITY_SEED),
                 )?;
-                log_commission_info(false, commission_amount);
+                log_commission_info(false, commission_amount, 0);
                 commission_account.key().log();
             }
 
@@ -352,7 +360,7 @@ impl SwapToBProcessor {
                     platform_fee_amount,
                     Some(SA_AUTHORITY_SEED),
                 )?;
-                log_platform_fee_info(platform_fee_amount, &platform_fee_account.key());
+                log_platform_fee_info(platform_fee_amount, 0, &platform_fee_account.key());
             }
 
             return Ok(false);
@@ -385,12 +393,14 @@ impl SwapToBProcessor {
             require!(is_system_account(trim_account), ErrorCode::InvalidTrimAccount);
         }
 
+        // Validate and extract charge_account if needed
         let charge_account = if charge_amount > 0 {
-            require!(charge_account.is_some(), ErrorCode::TrimAccountIsNone);
-            if acc_close_flag {
-                require!(is_system_account(charge_account.unwrap()), ErrorCode::InvalidTrimAccount);
+            require!(charge_account.is_some(), ErrorCode::ChargeAccountIsNone);
+            let charge_acc = charge_account.as_ref().unwrap();
+            if acc_close_flag || is_unwrap_wsol_to_sa {
+                require!(is_system_account(charge_acc), ErrorCode::InvalidChargeAccount);
             }
-            Some(charge_account.unwrap().to_account_info())
+            Some(charge_acc.to_account_info())
         } else {
             None
         };
@@ -411,18 +421,23 @@ impl SwapToBProcessor {
 
             if trim_amount > 0 {
                 // Transfer SOL trim fee
-                transfer_sol_fee(sa_authority, trim_account, trim_amount, Some(SA_AUTHORITY_SEED))?;
-                log_trim_fee_info(trim_amount, &trim_account.key());
+                let adjust_amount = transfer_sol_fee(
+                    sa_authority,
+                    trim_account,
+                    trim_amount,
+                    Some(SA_AUTHORITY_SEED),
+                )?;
+                log_trim_fee_info(trim_amount, adjust_amount, &trim_account.key());
             }
 
-            if charge_amount > 0 {
-                transfer_sol_fee(
+            if let Some(charge_acc) = charge_account {
+                let adjust_amount = transfer_sol_fee(
                     sa_authority,
-                    charge_account.as_ref().unwrap(),
+                    &charge_acc,
                     charge_amount,
                     Some(SA_AUTHORITY_SEED),
                 )?;
-                log_platform_trim_fee_info(charge_amount, &charge_account.unwrap().key());
+                log_charge_fee_info(charge_amount, adjust_amount, &charge_acc.key());
             }
             return Ok(true);
         } else {
@@ -441,20 +456,20 @@ impl SwapToBProcessor {
                     trim_amount,
                     Some(SA_AUTHORITY_SEED),
                 )?;
-                log_trim_fee_info(trim_amount, &trim_account.key());
+                log_trim_fee_info(trim_amount, 0, &trim_account.key());
             }
 
-            if charge_amount > 0 {
+            if let Some(charge_acc) = charge_account {
                 transfer_token_fee(
                     sa_authority,
                     destination_token_sa,
                     destination_mint,
                     destination_token_program,
-                    charge_account.as_ref().unwrap(),
+                    &charge_acc,
                     charge_amount,
                     Some(SA_AUTHORITY_SEED),
                 )?;
-                log_platform_trim_fee_info(charge_amount, &charge_account.unwrap().key());
+                log_charge_fee_info(charge_amount, 0, &charge_acc.key());
             }
             return Ok(false);
         }

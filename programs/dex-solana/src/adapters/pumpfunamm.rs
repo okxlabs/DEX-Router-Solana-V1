@@ -1,11 +1,10 @@
 use super::common::DexProcessor;
 use crate::adapters::common::{before_check, invoke_process};
-use crate::adapters::pumpfun::{FeeConfig, FeeTier, parse_fee_config};
 use crate::error::ErrorCode;
 use crate::utils::transfer_sol;
 use crate::{
-    HopAccounts, PUMPFUN_BUY_SELECTOR, PUMPFUN_SELL_SELECTOR, SOL_DIFF_LIMIT, ZERO_ADDRESS,
-    authority_pda, pumpfun_program, pumpfunamm_program,
+    BUY_EXACT_QUOTE_IN_SELECTOR, HopAccounts, PUMPFUN_SELL_SELECTOR, SOL_DIFF_LIMIT, authority_pda,
+    pumpfunamm_program,
 };
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::instruction::Instruction;
@@ -14,7 +13,6 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 use arrayref::array_ref;
 
 const ARGS_LEN: usize = 24;
-const PUMPFUN_AMM_NUMERATOR: u128 = 10_000;
 pub struct PumpfunammSellAccounts3<'info> {
     pub dex_program_id: &'info AccountInfo<'info>,
     pub swap_authority_pubkey: &'info AccountInfo<'info>,
@@ -187,7 +185,7 @@ pub fn sell3<'a>(
     data.extend_from_slice(&1u64.to_le_bytes()); // min_quote_amount_out
 
     let accounts = vec![
-        AccountMeta::new_readonly(swap_accounts.pool.key(), false),
+        AccountMeta::new(swap_accounts.pool.key(), false),
         AccountMeta::new(swap_accounts.swap_authority_pubkey.key(), true),
         AccountMeta::new_readonly(swap_accounts.global_config.key(), false),
         AccountMeta::new_readonly(swap_accounts.base_mint.key(), false),
@@ -343,42 +341,6 @@ impl<'info> PumpfunammBuyAccounts3<'info> {
             fee_program,
         })
     }
-
-    fn cal_base_amount_out(&self, amount_in: u128) -> Result<u128> {
-        let base_reserves = self.pool_base_token_account.amount;
-        let quote_reserves = self.pool_quote_token_account.amount;
-
-        let pool_data = self.pool.try_borrow_data()?;
-        let coin_creator = Pubkey::new_from_array(*array_ref![pool_data, 211, 32]);
-        let pool_creator = Pubkey::new_from_array(*array_ref![pool_data, 11, 32]);
-
-        if base_reserves == 0 || quote_reserves == 0 {
-            return Err(ErrorCode::InvalidPool.into());
-        }
-
-        let (lp_fee_bps, protocol_fee_bps, creator_fee_bps) = compute_fees_bps(
-            self.global_config,
-            Some(self.fee_config),
-            pool_creator,
-            self.base_mint.supply,
-            &self.base_mint.to_account_info(),
-            base_reserves,
-            quote_reserves,
-        )?;
-
-        let creator_fee = if coin_creator == ZERO_ADDRESS { 0u64 } else { creator_fee_bps };
-
-        let total_fee_bps =
-            lp_fee_bps.checked_add(protocol_fee_bps).unwrap().checked_add(creator_fee).unwrap();
-        let denominator = (total_fee_bps as u128).checked_add(PUMPFUN_AMM_NUMERATOR).unwrap();
-        let effective_quote =
-            amount_in.checked_mul(PUMPFUN_AMM_NUMERATOR).unwrap().checked_div(denominator).unwrap();
-
-        let numerator = (base_reserves as u128).checked_mul(effective_quote).unwrap();
-        let denominator_effective = (quote_reserves as u128).checked_add(effective_quote).unwrap();
-        let base_amount_out = numerator.checked_div(denominator_effective).unwrap();
-        Ok(base_amount_out as u128)
-    }
 }
 pub struct PumpfunammBuyProcessor;
 impl DexProcessor for PumpfunammBuyProcessor {}
@@ -415,16 +377,13 @@ pub fn buy3<'a>(
         owner_seeds,
     )?;
 
-    let amount_out =
-        swap_accounts.cal_base_amount_out((amount_in as u128).saturating_sub(2))? as u64;
-
     let mut data = Vec::with_capacity(ARGS_LEN);
-    data.extend_from_slice(PUMPFUN_BUY_SELECTOR);
-    data.extend_from_slice(&amount_out.to_le_bytes()); // base_amount_out
-    data.extend_from_slice(&amount_in.to_le_bytes()); // max_quote_amount_in
+    data.extend_from_slice(BUY_EXACT_QUOTE_IN_SELECTOR);
+    data.extend_from_slice(&amount_in.to_le_bytes()); // spendable_quote_in
+    data.extend_from_slice(&1u64.to_le_bytes()); // min_base_amount_out
 
     let accounts = vec![
-        AccountMeta::new_readonly(swap_accounts.pool.key(), false),
+        AccountMeta::new(swap_accounts.pool.key(), false),
         AccountMeta::new(swap_accounts.swap_authority_pubkey.key(), true),
         AccountMeta::new_readonly(swap_accounts.global_config.key(), false),
         AccountMeta::new_readonly(swap_accounts.base_mint.key(), false), // wsol
@@ -494,110 +453,6 @@ pub fn buy3<'a>(
     )?;
 
     Ok(amount_out)
-}
-
-pub fn compute_fees_bps(
-    global_config: &AccountInfo,
-    fee_config: Option<&AccountInfo>,
-    creator: Pubkey,
-    base_mint_supply: u64,
-    base_mint: &AccountInfo,
-    base_reserve: u64,
-    quote_reserve: u64,
-) -> Result<(u64, u64, u64)> {
-    if fee_config.is_some() {
-        let market_cap = pool_market_cap(base_mint_supply, base_reserve, quote_reserve)?;
-        let fee_config = fee_config.unwrap();
-        let fee_config_data = fee_config.try_borrow_data()?.to_vec();
-        let fee_config = parse_fee_config(fee_config_data.as_slice())?;
-        let is_pump_pool = is_pump_pool(&base_mint.key(), &creator);
-        let (lp_fee_bps, protocol_fee_bps, creator_fee_bps) =
-            get_fees(&fee_config, is_pump_pool, market_cap)?;
-        return Ok((lp_fee_bps, protocol_fee_bps, creator_fee_bps));
-    }
-    let data = global_config.try_borrow_data()?;
-    let lp_fee_basis_points = u64::from_le_bytes(*array_ref![data, 40, 8]);
-    let protocol_fee_basis_points = u64::from_le_bytes(*array_ref![data, 48, 8]);
-    let coin_creator_fee_basis_points = u64::from_le_bytes(*array_ref![data, 313, 8]);
-    return Ok((lp_fee_basis_points, protocol_fee_basis_points, coin_creator_fee_basis_points));
-}
-
-pub fn get_fees(
-    fee_config: &FeeConfig,
-    is_pump_pool: bool,
-    market_cap: u64,
-) -> Result<(u64, u64, u64)> {
-    if is_pump_pool {
-        let fees = calculate_fee_tier(&fee_config.fee_tiers, market_cap)?;
-        Ok(fees)
-    } else {
-        Ok((
-            fee_config.flat_fees.lp_fee_bps,
-            fee_config.flat_fees.protocol_fee_bps,
-            fee_config.flat_fees.creator_fee_bps,
-        ))
-    }
-}
-
-pub fn calculate_fee_tier(fee_tiers: &[FeeTier], market_cap: u64) -> Result<(u64, u64, u64)> {
-    if fee_tiers.is_empty() {
-        return Err(ErrorCode::InvalidAccountData.into());
-    }
-
-    let first_tier = &fee_tiers[0];
-
-    if market_cap < first_tier.market_cap_lamports_threshold as u64 {
-        return Ok((
-            first_tier.fees.lp_fee_bps,
-            first_tier.fees.protocol_fee_bps,
-            first_tier.fees.creator_fee_bps,
-        ));
-    }
-
-    for tier in fee_tiers.iter().rev() {
-        if market_cap >= tier.market_cap_lamports_threshold as u64 {
-            return Ok((
-                tier.fees.lp_fee_bps,
-                tier.fees.protocol_fee_bps,
-                tier.fees.creator_fee_bps,
-            ));
-        }
-    }
-
-    Ok((
-        first_tier.fees.lp_fee_bps,
-        first_tier.fees.protocol_fee_bps,
-        first_tier.fees.creator_fee_bps,
-    ))
-}
-
-pub fn pool_market_cap(
-    base_mint_supply: u64,
-    base_reserve: u64,
-    quote_reserve: u64,
-) -> Result<u64> {
-    if base_reserve == 0 {
-        return Err(ErrorCode::CalculationError.into());
-    }
-
-    let result = (quote_reserve as u128)
-        .checked_mul(base_mint_supply as u128)
-        .ok_or(ErrorCode::CalculationError)?
-        .checked_div(base_reserve as u128)
-        .ok_or(ErrorCode::CalculationError)?;
-
-    Ok(result as u64)
-}
-
-pub fn pump_pool_authority_pda(mint: &Pubkey) -> (Pubkey, u8) {
-    let program_id = pumpfun_program::id();
-
-    Pubkey::find_program_address(&[b"pool-authority", mint.as_ref()], &program_id)
-}
-
-pub fn is_pump_pool(base_mint: &Pubkey, pool_creator: &Pubkey) -> bool {
-    let (pool_authority_pda, _) = pump_pool_authority_pda(base_mint);
-    pool_authority_pda == *pool_creator
 }
 
 /*============================= pumpfunamm abort function ============================= */

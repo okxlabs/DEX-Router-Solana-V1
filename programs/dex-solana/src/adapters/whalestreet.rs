@@ -4,7 +4,7 @@ use arrayref::array_ref;
 
 use crate::adapters::common::{before_check, invoke_process};
 use crate::error::ErrorCode;
-use crate::{HopAccounts, SWAP_SELECTOR, swaap_program};
+use crate::{HopAccounts, SWAP_SELECTOR, whalestreet_program};
 
 use super::common::DexProcessor;
 
@@ -61,13 +61,13 @@ pub fn swap<'a>(
     proxy_swap: bool,
     owner_seeds: Option<&[&[&[u8]]]>,
 ) -> Result<u64> {
-    msg!("Dex::Swaap amount_in: {}, offset: {}", amount_in, offset);
+    msg!("Dex::Whalestreet amount_in: {}, offset: {}", amount_in, offset);
 
     require!(remaining_accounts.len() >= *offset + ACCOUNTS_LEN, ErrorCode::InvalidAccountsLength);
 
     let mut swap_accounts = SwaapAccounts::parse_accounts(remaining_accounts, *offset)?;
 
-    if swap_accounts.dex_program_id.key != &swaap_program::id() {
+    if swap_accounts.dex_program_id.key != &whalestreet_program::id() {
         return Err(ErrorCode::InvalidProgramId.into());
     }
 

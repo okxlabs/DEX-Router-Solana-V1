@@ -48,26 +48,27 @@ pub fn log_swap_end(
     );
 }
 
-pub fn log_commission_info(commission_direction: bool, commission_amount: u64) {
+pub fn log_commission_info(commission_direction: bool, commission_amount: u64, adjust_amount: u64) {
     msg!(
-        "commission_direction: {:?}, commission_amount: {:?}",
+        "commission_direction: {:?}, commission_amount: {:?}, commission_adjust_amount: {:?}",
         commission_direction,
-        commission_amount
+        commission_amount,
+        adjust_amount
     );
 }
 
-pub fn log_platform_fee_info(amount: u64, fee_account: &Pubkey) {
-    msg!("platform_fee_amount: {:?}", amount);
+pub fn log_platform_fee_info(amount: u64, adjust_amount: u64, fee_account: &Pubkey) {
+    msg!("platform_fee_amount: {:?}, platform_fee_adjust_amount: {:?}", amount, adjust_amount);
     fee_account.log();
 }
 
-pub fn log_trim_fee_info(amount: u64, fee_account: &Pubkey) {
-    msg!("trim_fee_amount: {:?}", amount);
+pub fn log_trim_fee_info(amount: u64, adjust_amount: u64, fee_account: &Pubkey) {
+    msg!("trim_fee_amount: {:?}, trim_fee_adjust_amount: {:?}", amount, adjust_amount);
     fee_account.log();
 }
 
-pub fn log_platform_trim_fee_info(amount: u64, fee_account: &Pubkey) {
-    msg!("platform_trim_fee_amount: {:?}", amount);
+pub fn log_charge_fee_info(amount: u64, adjust_amount: u64, fee_account: &Pubkey) {
+    msg!("charge_fee_amount: {:?}, charge_fee_adjust_amount: {:?}", amount, adjust_amount);
     fee_account.log();
 }
 
@@ -112,14 +113,12 @@ pub fn log_rate_info_v3_enhanced(
     acc_close_flag: bool,
 ) {
     let platform_fee_rate_val = platform_fee_rate.unwrap_or(0);
-    let trim_rate_val = trim_rate;
-    let charge_rate_val = charge_rate;
     msg!(
         "commission_rate: {:?}, platform_fee_rate: {:?}, trim_rate: {:?}, charge_rate: {:?}, commission_direction: {:?}, acc_close_flag: {:?}",
         commission_rate,
         platform_fee_rate_val,
-        trim_rate_val,
-        charge_rate_val,
+        trim_rate,
+        charge_rate,
         commission_direction,
         acc_close_flag
     );
