@@ -98,7 +98,7 @@ pub enum Dex {
     MoonitBuy,
     MoonitSell,
     RaydiumSwapV2,
-    Swaap,
+    Whalestreet,
     #[strum(to_string = "SugarMoneyBuy")]
     SugarMoneyBuy {
         bonding_curve_bump: u8,
@@ -110,6 +110,9 @@ pub enum Dex {
         bonding_curve_sol_associated_account_bump: u8,
     },
     MeteoraDAMMV2Swap2,
+    AlphaQ,
+    FutarchyAmm,
+    PumpfunSell2,
 }
 
 #[derive(Debug)]
@@ -745,7 +748,18 @@ fn distribute_swap<'a>(
                 *taker_use_native_sol,
             );
         }
-        Dex::PumpfunBuy2 => pumpfun::buy2,
+        Dex::PumpfunBuy2 => {
+            return pumpfun::buy2(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                payer,
+            );
+        }
         Dex::PumpfunammBuy2 => pumpfunamm::buy2,
         Dex::Humidifi => humidifi::swap,
         Dex::HeavenBuy => heaven::buy,
@@ -803,7 +817,7 @@ fn distribute_swap<'a>(
         }
         Dex::MoonitSell => moonit::sell,
         Dex::RaydiumSwapV2 => raydium::swap_v2,
-        Dex::Swaap => swaap::swap,
+        Dex::Whalestreet => whalestreet::swap,
         Dex::SugarMoneyBuy { bonding_curve_bump, bonding_curve_sol_associated_account_bump } => {
             return sugar_money::buy(
                 remaining_accounts,
@@ -832,6 +846,20 @@ fn distribute_swap<'a>(
             );
         }
         Dex::MeteoraDAMMV2Swap2 => meteora::damm_v2_swap2,
+        Dex::AlphaQ => alphaq::swap,
+        Dex::FutarchyAmm => futarchy::swap,
+        Dex::PumpfunSell2 => {
+            return pumpfun::sell2(
+                remaining_accounts,
+                amount_in,
+                offset,
+                hop_accounts,
+                hop,
+                proxy_from,
+                owner_seeds,
+                payer,
+            );
+        }
     };
     swap_function(remaining_accounts, amount_in, offset, hop_accounts, hop, proxy_from, owner_seeds)
 }

@@ -218,7 +218,7 @@ fn post_swap_check<'info>(
             .checked_sub(after_source_balance)
             .ok_or(ErrorCode::CalculationError)?;
 
-        // min_amount_in = 90% of amount_in
+        // min_amount_in = 95% of amount_in
         let min_amount_in = u64::try_from(
             u128::from(amount_in)
                 .checked_mul(ACTUAL_IN_LOWER_BOUND_NUM)

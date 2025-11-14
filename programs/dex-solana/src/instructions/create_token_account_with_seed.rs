@@ -1,9 +1,12 @@
+use crate::error::ErrorCode;
 use crate::utils::is_token_account_initialized;
-use crate::{authority_pda, token_program, wsol_program};
+use crate::{token_program, wsol_program};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke_signed;
+use anchor_lang::solana_program::program_pack::Pack;
 use anchor_lang::solana_program::{system_instruction, system_program};
 use anchor_spl::token::TokenAccount;
+use anchor_spl::token::spl_token::state::Account as SplTokenAccount;
 use anchor_spl::{
     token::Token,
     token_interface::{self, Mint},
@@ -15,10 +18,7 @@ pub struct CreateTokenAccountWithSeedAccounts<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// CHECK: This is the owner of the token account, it can be the user or sa authority
-    #[account(
-        constraint = owner.key() == payer.key() || owner.key() == authority_pda::id()
-    )]
+    /// CHECK: This is the owner of the token account
     pub owner: AccountInfo<'info>,
 
     /// CHECK: This is the wsol token account to be created
@@ -58,10 +58,14 @@ pub fn create_token_account_with_seed_handler<'a>(
 
     // before allocate, check if the account is already initialized
     if is_token_account_initialized(&token_account) {
+        let data = token_account.try_borrow_data()?;
+        let ta = SplTokenAccount::unpack(&data)?;
+
+        require_keys_eq!(ta.owner, owner.key(), ErrorCode::InvalidTokenAccount);
+
         msg!("Token account already initialized");
         return Ok(());
     }
-
     // 1) allocate space for the account (allocate)
     let ix_allocate = system_instruction::allocate(token_account.key, space);
     invoke_signed(&ix_allocate, &[token_account.clone()], signer_seeds)?;

@@ -214,7 +214,7 @@ pub fn platform_fee_wrap_unwrap_handler_v2<'a>(
                 ctx.accounts.token_program.to_account_info(),
                 Some(SA_AUTHORITY_SEED),
             )?;
-            log_platform_fee_info(platform_fee_amount, &sa_account_key);
+            log_platform_fee_info(platform_fee_amount, 0, &sa_account_key);
         }
         transfer_sol(
             ctx.accounts.payer.to_account_info(),
@@ -235,7 +235,7 @@ pub fn platform_fee_wrap_unwrap_handler_v2<'a>(
                 None,
             )?;
 
-            log_platform_fee_info(platform_fee_amount, &sa_account_key);
+            log_platform_fee_info(platform_fee_amount, 0, &sa_account_key);
         }
 
         transfer_token(
@@ -253,6 +253,7 @@ pub fn platform_fee_wrap_unwrap_handler_v2<'a>(
     log_commission_info(
         commission_direction,
         commission_amount.checked_sub(platform_fee_amount).unwrap(),
+        0,
     );
     commission_account_info.key().log();
 

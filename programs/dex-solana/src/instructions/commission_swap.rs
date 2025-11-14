@@ -79,7 +79,7 @@ impl<'info> CommonCommissionProcessor<'info> for CommissionProcessor {
             commission_amount,
             None,
         )?;
-        log_commission_info(commission_direction, commission_amount);
+        log_commission_info(commission_direction, commission_amount, 0);
         Ok(())
     }
 
@@ -154,7 +154,7 @@ impl<'info> CommonCommissionProcessor<'info> for CommissionProcessor {
             )?;
             commission_amount
         };
-        log_commission_info(commission_direction, commission_amount);
+        log_commission_info(commission_direction, commission_amount, 0);
         Ok(())
     }
 }

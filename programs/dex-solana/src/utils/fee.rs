@@ -182,7 +182,7 @@ pub fn calculate_trim_amount(
 
     if charge_rate.is_some() && charge_rate.unwrap() > 0 {
         let charge_rate = charge_rate.unwrap();
-        require!(charge_rate <= TRIM_DENOMINATOR_V2, ErrorCode::InvalidTrimRate);
+        require!(charge_rate <= TRIM_DENOMINATOR_V2, ErrorCode::InvalidChargeRate);
 
         let charge_amount = u64::try_from(
             u128::from(trim_amount)
@@ -254,7 +254,7 @@ pub fn transfer_sol_fee<'a>(
         actual_fee_amount,
         signer_seeds,
     )?;
-    Ok(actual_fee_amount)
+    Ok(actual_fee_amount.saturating_sub(fee_amount))
 }
 
 pub fn is_charge_sol(

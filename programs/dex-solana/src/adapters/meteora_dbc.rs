@@ -173,7 +173,7 @@ pub fn swap<'a>(
     data.extend_from_slice(SWAP2_SELECTOR);
     data.extend_from_slice(&amount_in.to_le_bytes()); // amount0(amount_in)
     data.extend_from_slice(&1u64.to_le_bytes()); // amount1(minimum_amount_out)
-    data.extend_from_slice(&1u8.to_le_bytes()); // swap_mode(partial_fill)
+    data.push(0u8); // swap_mode(exact_in)
 
     let accounts = vec![
         AccountMeta::new_readonly(swap_accounts.pool_authority.key(), false),
@@ -277,7 +277,7 @@ pub fn swap2<'a>(
     data.extend_from_slice(SWAP2_SELECTOR);
     data.extend_from_slice(&amount_in.to_le_bytes()); // amount0(amount_in)
     data.extend_from_slice(&1u64.to_le_bytes()); // amount1(minimum_amount_out)
-    data.extend_from_slice(&1u8.to_le_bytes()); // swap_mode(partial_fill)
+    data.push(0u8); // swap_mode(exact_in)
 
     let accounts = vec![
         AccountMeta::new_readonly(swap_accounts.pool_authority.key(), false),
