@@ -287,8 +287,8 @@ pub fn buy3<'a>(
         swap_accounts.global,
         Some(swap_accounts.fee_config),
         mint_supply,
-        virtual_sol_reserves,
         virtual_token_reserves,
+        virtual_sol_reserves,
         amount_in,
         creator,
     )?;
@@ -560,8 +560,8 @@ pub fn sell3<'a>(
         swap_accounts.global,
         Some(swap_accounts.fee_config),
         mint_supply,
-        virtual_sol_reserves,
         virtual_token_reserves,
+        virtual_sol_reserves,
         sol_amount_out,
         creator,
     )?;
@@ -935,8 +935,8 @@ pub fn buy2<'a>(
         swap_accounts.global,
         Some(swap_accounts.fee_config),
         mint_supply,
-        virtual_sol_reserves,
         virtual_token_reserves,
+        virtual_sol_reserves,
         amount_in,
         creator,
     )?;
@@ -1143,8 +1143,8 @@ pub fn sell2<'a>(
         swap_accounts.global,
         Some(swap_accounts.fee_config),
         mint_supply,
-        virtual_sol_reserves,
         virtual_token_reserves,
+        virtual_sol_reserves,
         sol_amount_out,
         creator,
     )?;
