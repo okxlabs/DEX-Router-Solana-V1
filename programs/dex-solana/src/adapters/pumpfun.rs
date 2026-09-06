@@ -362,7 +362,7 @@ pub fn buy3<'a>(
         offset,
         BUY_ACCOUNTS_LEN3,
         proxy_swap,
-        None,
+        owner_seeds,
     )?;
     Ok(amount_out)
 }
@@ -1011,7 +1011,7 @@ pub fn buy2<'a>(
         offset,
         BUY_ACCOUNTS_LEN2,
         proxy_swap,
-        None,
+        owner_seeds,
     )?;
     Ok(amount_out)
 }
