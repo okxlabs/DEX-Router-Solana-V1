@@ -20,6 +20,7 @@ This repository contains the core smart contracts for the Dex Router on Solana B
 - **Commission Swap**: Trading mode with commission collection
 - **Platform Fee Swap**: Trading mode with platform fee collection
 - **Wrap/Unwrap**: SOL to wSOL conversion
+- **LST Mint/Redeem**: wSOL to and from any public SPL-family stake pool LST (SPL Stake Pool, Sanctum SPL, Sanctum SPL Multi), Token-2022 mints included, via the permissionlessLST router (`PermissionlessLstMint` / `PermissionlessLstRedeem`)
 
 ## 📋 System Requirements
 

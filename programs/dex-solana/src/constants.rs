@@ -172,6 +172,26 @@ pub mod token_2022_program {
     declare_id!("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
 }
 
+pub mod permissionless_lst_program {
+    use anchor_lang::declare_id;
+    declare_id!("9XPcSKi9zHn2eqZGUFEDpPC5PBF1oAu3NhyzTrkoe3h3");
+}
+
+pub mod spl_stake_pool_program {
+    use anchor_lang::declare_id;
+    declare_id!("SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy");
+}
+
+pub mod sanctum_spl_stake_pool_program {
+    use anchor_lang::declare_id;
+    declare_id!("SP12tWFxD9oJsVWNavTTBZvMbA6gkAmxtVgxdqvyvhY");
+}
+
+pub mod sanctum_spl_multi_stake_pool_program {
+    use anchor_lang::declare_id;
+    declare_id!("SPMBzsVUuoHA4Jm6KunbsotaahvVikZs1JyTW6iJvbn");
+}
+
 pub mod wsol_program {
     use anchor_lang::declare_id;
     declare_id!("So11111111111111111111111111111111111111112");
