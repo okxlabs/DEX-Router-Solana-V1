@@ -137,6 +137,8 @@ pub enum Dex {
     MoonitSell2,
     SaberDecimalWrapperDeposit2,
     SaberDecimalWrapperWithdraw2,
+    PermissionlessLstMint,
+    PermissionlessLstRedeem,
 }
 
 #[derive(Debug)]
@@ -968,6 +970,8 @@ fn distribute_swap<'a>(
         Dex::MoonitSell2 => moonit2::sell,
         Dex::SaberDecimalWrapperDeposit2 => saber_decimal_wrapper2::deposit,
         Dex::SaberDecimalWrapperWithdraw2 => saber_decimal_wrapper2::withdraw,
+        Dex::PermissionlessLstMint => permissionless_lst::mint,
+        Dex::PermissionlessLstRedeem => permissionless_lst::redeem,
     };
     swap_function(remaining_accounts, amount_in, offset, hop_accounts, hop, proxy_from, owner_seeds)
 }

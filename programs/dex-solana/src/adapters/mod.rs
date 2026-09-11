@@ -29,6 +29,7 @@ pub mod obric_v2;
 pub mod one_dex;
 pub mod openbookv2;
 pub mod pancake_swap_v3;
+pub mod permissionless_lst;
 pub mod perpetuals;
 pub mod phoenix;
 pub mod pumpfun;
